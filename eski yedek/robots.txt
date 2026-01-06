@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /panel/
-Sitemap: https://menuly.net/sitemap.xml
