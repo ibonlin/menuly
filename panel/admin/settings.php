@@ -3,14 +3,25 @@ require_once '../includes/db.php';
 
 if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit; }
 $user_id = $_SESSION['user_id'];
+
+// CSRF Token (Güvenlik)
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $message = '';
 
 // --- İŞLEM: AYARLARI GÜNCELLE ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // 1. CSRF KONTROLÜ
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        die("Güvenlik Hatası: Sayfa süresi dolmuş. Lütfen yenileyin.");
+    }
+
     // --- DEMO KORUMASI ---
     if (isset($_SESSION['username']) && $_SESSION['username'] === 'demo') {
         $message = '<div class="alert success" style="background:#fff7ed; color:#ea580c; border:1px solid #fed7aa;">
-            <i class="ph-bold ph-warning"></i> Demo Modu: Değişiklikler simülasyon amaçlıdır.
+            <i class="ph-bold ph-warning"></i> Demo Modu: Değişiklikler kaydedilmez.
         </div>';
         goto skip_save; 
     }
@@ -21,8 +32,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $insta = trim($_POST['instagram']);
     $new_pass = trim($_POST['password']);
     $theme_col = trim($_POST['theme_color']);
-    
-    // QR Renkleri
     $qr_fg = trim($_POST['qr_fg_color']);
     $qr_bg = trim($_POST['qr_bg_color']);
     
@@ -30,43 +39,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $slug = strtolower(str_replace(' ', '-', $slug));
     $slug = preg_replace('/[^a-z0-9-]/', '', $slug);
 
-    // LOGO YÜKLEME
+    // MEVCUT RESİMLERİ ÇEK
     $stmt = $pdo->prepare("SELECT logo, cover_image FROM users WHERE id = ?");
     $stmt->execute([$user_id]);
     $current_data = $stmt->fetch();
     $logo_path = $current_data['logo'];
     $cover_path = $current_data['cover_image'];
 
+    // --- GÜVENLİ LOGO YÜKLEME ---
     if (isset($_FILES['logo']) && $_FILES['logo']['error'] == 0) {
         $ext = strtolower(pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION));
+        // 1. Uzantı Kontrolü
         if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
-            if (!empty($logo_path) && file_exists('../' . $logo_path)) unlink('../' . $logo_path);
-            $new_name = 'logo_' . $user_id . '_' . time() . '.' . $ext;
-            if (move_uploaded_file($_FILES['logo']['tmp_name'], '../assets/uploads/' . $new_name)) {
-                $logo_path = 'assets/uploads/' . $new_name;
+            // 2. [YENİ] Dosya İçerik Kontrolü (Gerçekten resim mi?)
+            $check = getimagesize($_FILES['logo']['tmp_name']);
+            if($check !== false) {
+                if (!empty($logo_path) && file_exists('../' . $logo_path)) unlink('../' . $logo_path);
+                // Rastgele isim oluştur (Çakışmayı önler)
+                $new_name = 'logo_' . $user_id . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+                if (move_uploaded_file($_FILES['logo']['tmp_name'], '../assets/uploads/' . $new_name)) {
+                    $logo_path = 'assets/uploads/' . $new_name;
+                }
+            } else {
+                $message = '<div class="alert error">Hata: Yüklenen logo gerçek bir resim dosyası değil!</div>';
             }
         }
     }
 
-    // KAPAK FOTOĞRAFI
+    // --- GÜVENLİ KAPAK FOTOĞRAFI YÜKLEME ---
     if (isset($_FILES['cover_image']) && $_FILES['cover_image']['error'] == 0) {
         $ext = strtolower(pathinfo($_FILES['cover_image']['name'], PATHINFO_EXTENSION));
         if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
-            if (!empty($cover_path) && file_exists('../' . $cover_path)) unlink('../' . $cover_path);
-            $new_cover = 'cover_' . $user_id . '_' . time() . '.' . $ext;
-            if (move_uploaded_file($_FILES['cover_image']['tmp_name'], '../assets/uploads/' . $new_cover)) {
-                $cover_path = 'assets/uploads/' . $new_cover;
+            // [YENİ] İçerik Kontrolü
+            $check = getimagesize($_FILES['cover_image']['tmp_name']);
+            if($check !== false) {
+                if (!empty($cover_path) && file_exists('../' . $cover_path)) unlink('../' . $cover_path);
+                $new_cover = 'cover_' . $user_id . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+                if (move_uploaded_file($_FILES['cover_image']['tmp_name'], '../assets/uploads/' . $new_cover)) {
+                    $cover_path = 'assets/uploads/' . $new_cover;
+                }
+            } else {
+                $message = '<div class="alert error">Hata: Yüklenen kapak resmi geçersiz!</div>';
             }
         }
     }
 
-    // VERİTABANI GÜNCELLEME (QR renkleri dahil, Email/Phone hariç - onlar sadece okunur)
+    // VERİTABANI GÜNCELLEME
     $sql = "UPDATE users SET restaurant_name=?, slug=?, wifi_pass=?, instagram=?, logo=?, cover_image=?, theme_color=?, qr_fg_color=?, qr_bg_color=?";
     $params = [$rest_name, $slug, $wifi, $insta, $logo_path, $cover_path, $theme_col, $qr_fg, $qr_bg];
 
     if (!empty($new_pass)) {
+        $hashed_pass = password_hash($new_pass, PASSWORD_DEFAULT);
         $sql .= ", password=?";
-        $params[] = $new_pass;
+        $params[] = $hashed_pass;
     }
     
     $sql .= " WHERE id=?";
@@ -74,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $stmt = $pdo->prepare($sql);
     if ($stmt->execute($params)) {
-        $message = '<div class="alert success">Ayarlar güncellendi!</div>';
+        $message = '<div class="alert success">Ayarlar başarıyla güncellendi!</div>';
         $_SESSION['restaurant_name'] = $rest_name;
     } else {
         $message = '<div class="alert error">Bir hata oluştu.</div>';
@@ -92,7 +117,7 @@ $current_theme_color = !empty($user['theme_color']) ? $user['theme_color'] : '#1
 $qr_fg = !empty($user['qr_fg_color']) ? $user['qr_fg_color'] : '#000000';
 $qr_bg = !empty($user['qr_bg_color']) ? $user['qr_bg_color'] : '#ffffff';
 
-// QR API Linki
+// QR Linki
 $qr_fg_clean = str_replace('#', '', $qr_fg);
 $qr_bg_clean = str_replace('#', '', $qr_bg);
 $base_url = (isset($_SERVER['HTTPS']) ? "https" : "http") . "://$_SERVER[HTTP_HOST]";
@@ -114,21 +139,15 @@ $qr_api = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" . url
     <style>
         .settings-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
         .logo-preview { width: 80px; height: 80px; border-radius: 12px; object-fit: contain; background: #f8fafc; border: 1px solid #e2e8f0; margin-bottom: 10px; }
-        
-        /* Renk Seçiciler */
         .color-input-group { display: flex; gap: 10px; flex-wrap: wrap; }
         .color-input-wrapper { display: flex; align-items: center; border: 1px solid #e2e8f0; padding: 8px 12px; border-radius: 8px; background: white; cursor: pointer; flex: 1; }
         input[type="color"] { border: none; width: 32px; height: 32px; cursor: pointer; background: none; padding: 0; margin-right: 10px; }
         .input-label { font-size: 12px; color: #64748b; font-weight: 600; display: block; margin-bottom: 5px; }
-        
         .btn-reset-color { background: #f8fafc; border: 1px solid #e2e8f0; color: #64748b; padding: 0 15px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: 0.2s; height: 50px; }
         .btn-reset-color:hover { background: #e2e8f0; color: #1e293b; }
-
-        /* Kilitli Alan Stili (Gri ve ikonlu) */
         .input-locked { background-color: #f1f5f9; color: #64748b; cursor: not-allowed; border-color: #e2e8f0; padding-right: 35px; }
         .locked-wrapper { position: relative; }
         .locked-icon { position: absolute; right: 12px; top: 38px; color: #94a3b8; pointer-events: none; font-size: 18px; }
-
         @media (max-width: 768px) { .settings-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -160,6 +179,7 @@ $qr_api = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" . url
         <div class="settings-grid">
             <div class="form-card" style="display:block">
                 <form method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                     
                     <div style="display:flex; gap:20px; margin-bottom:20px; align-items:flex-start;">
                         <div>
@@ -190,7 +210,7 @@ $qr_api = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" . url
                     <div style="margin-bottom:20px; padding:20px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0;">
                         <label style="display:block; font-weight:700; margin-bottom:15px; font-size:14px; color:#1e293b; display:flex; align-items:center; gap:5px;">
                             <i class="ph-fill ph-user-circle"></i> Üyelik Bilgileri 
-                            <span style="font-size:11px; font-weight:400; color:#64748b; margin-left:auto; display:none; sm:display:inline;">(Değiştirmek için yöneticiyle iletişime geçin)</span>
+                            <span style="font-size:11px; font-weight:400; color:#64748b; margin-left:auto;">(Değiştirmek için yöneticiyle iletişime geçin)</span>
                         </label>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
                             <div class="locked-wrapper">

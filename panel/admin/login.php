@@ -2,6 +2,11 @@
 session_start();
 require_once '../includes/db.php';
 
+// CSRF Token Oluştur (Oturum açılmamışsa bile form güvenliği için)
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 if (isset($_SESSION['user_id'])) {
     header("Location: index.php");
     exit;
@@ -9,6 +14,11 @@ if (isset($_SESSION['user_id'])) {
 
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // 1. CSRF KONTROLÜ
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        die("Güvenlik Hatası: Sayfa süresi dolmuş. Lütfen sayfayı yenileyip tekrar deneyin.");
+    }
+
     $username = trim($_POST['username']);
     $password = trim($_POST['password']);
 
@@ -16,10 +26,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->execute([$username]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($user && $password === $user['password']) {
+    // 2. ŞİFRE KONTROLÜ (password_verify)
+    if ($user && password_verify($password, $user['password'])) {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['username'] = $user['username'];
         $_SESSION['restaurant_name'] = $user['restaurant_name'];
+        
+        // Yeni token üret (Login sonrası güvenlik için)
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        
         header("Location: index.php");
         exit;
     } else {
@@ -61,6 +76,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
 
             <form method="POST" id="loginForm">
+                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+
                 <div id="step1" class="fade-in space-y-6">
                     <div class="text-center">
                         <h2 class="text-2xl font-extrabold text-slate-900">Hoş Geldiniz</h2>
@@ -103,7 +120,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             document.getElementById('step2').classList.add('step-hidden');
             document.getElementById('step1').classList.remove('step-hidden');
         }
-        // Enter tuşu desteği
         document.getElementById('username').addEventListener("keypress", function(e) {
             if (e.key === "Enter") { e.preventDefault(); goToStep2(); }
         });

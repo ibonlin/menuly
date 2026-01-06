@@ -1,18 +1,28 @@
 <?php
+// Session başlat (CSRF için gerekli)
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once '../includes/db.php';
 
 // Güvenlik: Sadece patron girebilir
 if (!isset($_SESSION['master_id'])) { header("Location: login.php"); exit; }
 
+// CSRF Token Oluştur
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $message = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // 1. CSRF KONTROLÜ
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        die("Güvenlik Hatası: Geçersiz istek.");
+    }
+
     $rest_name = trim($_POST['restaurant_name']);
     $username = trim($_POST['username']);
     $password = trim($_POST['password']);
     $sub_end = !empty($_POST['subscription_end']) ? $_POST['subscription_end'] : NULL;
-    
-    // YENİ ALANLAR
     $email = trim($_POST['email']);
     $phone = trim($_POST['phone']);
 
@@ -27,12 +37,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($check->fetchColumn() > 0) {
         $message = '<div style="color:red; margin-bottom:15px;">Bu kullanıcı adı veya restoran ismi zaten var!</div>';
     } else {
-        // KAYDET (Email ve Phone eklendi)
+        // 2. ŞİFREYİ HASHLE (GÜVENLİ HALE GETİR)
+        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+
+        // KAYDET
         $sql = "INSERT INTO users (username, password, restaurant_name, slug, subscription_end, email, phone, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 1)";
         $stmt = $pdo->prepare($sql);
         
-        if ($stmt->execute([$username, $password, $rest_name, $slug, $sub_end, $email, $phone])) {
-            // Başarılıysa ana sayfaya dön ve mesaj ver
+        // Hashed password kullanıyoruz
+        if ($stmt->execute([$username, $hashed_password, $rest_name, $slug, $sub_end, $email, $phone])) {
             header("Location: index.php?msg=added");
             exit;
         } else {
@@ -67,6 +80,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php echo $message; ?>
         
         <form method="POST">
+            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+
             <label>Restoran Adı (Örn: Paşa Döner)</label>
             <input type="text" name="restaurant_name" required>
             
@@ -81,6 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <label>Telefon Numarası</label>
             <input type="text" name="phone" placeholder="0555 123 45 67">
+            
             <label style="color:#2563eb;">Abonelik Bitiş Tarihi</label>
             <input type="date" name="subscription_end" value="<?php echo date('Y-m-d', strtotime('+1 year')); ?>">
             

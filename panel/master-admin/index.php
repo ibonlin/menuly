@@ -22,12 +22,14 @@ if (isset($_GET['toggle_status'])) {
 // --- İŞLEM 2: SİLME ---
 if (isset($_GET['delete_user'])) {
     $del_id = (int)$_GET['delete_user'];
+    // Önce resimleri sil
     $stmt = $pdo->prepare("SELECT image FROM products WHERE user_id = ?");
     $stmt->execute([$del_id]);
     $images = $stmt->fetchAll(PDO::FETCH_COLUMN);
     foreach ($images as $img) {
         if (!empty($img) && file_exists('../' . $img)) unlink('../' . $img);
     }
+    // Sonra kayıtları sil
     $pdo->prepare("DELETE FROM products WHERE user_id = ?")->execute([$del_id]);
     $pdo->prepare("DELETE FROM categories WHERE user_id = ?")->execute([$del_id]);
     $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$del_id]);
@@ -38,8 +40,8 @@ if (isset($_GET['delete_user'])) {
 // İstatistikler
 $total_users = $pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
 $total_active = $pdo->query("SELECT COUNT(*) FROM users WHERE is_active = 1")->fetchColumn();
-// Bekleyen Destek Sayısı (YENİ)
 $pending_tickets = $pdo->query("SELECT COUNT(*) FROM support_tickets WHERE status IN ('open', 'customer_reply')")->fetchColumn();
+
 // Listeleme
 $users = $pdo->query("SELECT * FROM users ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
 ?>
@@ -48,182 +50,244 @@ $users = $pdo->query("SELECT * FROM users ORDER BY id DESC")->fetchAll(PDO::FETC
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Master Admin - Menuly</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Panel | Menuly</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <style>
-        body { margin: 0; background: #f3f4f6; font-family: 'Plus Jakarta Sans', sans-serif; color: #1f2937; }
-        .topbar { background: #111827; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
-        .logo { font-weight: 800; font-size: 20px; color: #2563eb; text-decoration: none;}
-        .logout { color: #f87171; text-decoration: none; font-size: 14px; font-weight: 600; }
-        .container { max-width: 1100px; margin: 30px auto; padding: 0 20px; }
-        
-        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
-        .card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 20px; }
-        .icon { width: 60px; height: 60px; background: #eff6ff; color: #2563eb; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 30px; }
-        .num { font-size: 32px; font-weight: 800; margin: 0; line-height: 1; }
-        .label { color: #6b7280; font-size: 14px; margin: 5px 0 0 0; font-weight: 500; }
-        
-        .table-box { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        table { width: 100%; border-collapse: collapse; }
-        th { background: #f9fafb; text-align: left; padding: 15px; font-size: 13px; color: #6b7280; text-transform: uppercase; font-weight: 600; }
-        td { padding: 15px; border-top: 1px solid #e5e7eb; font-size: 14px; vertical-align: middle; }
-        tr:hover td { background: #f9fafb; }
-        
-        .badge { padding: 4px 10px; border-radius: 99px; font-size: 12px; font-weight: 700; display: inline-block; }
-        .badge.active { background: #dcfce7; color: #166534; }
-        .badge.passive { background: #fee2e2; color: #991b1b; }
 
-        .btn-icon { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; text-decoration: none; transition: 0.2s; }
-        .btn-edit { background: #eff6ff; color: #2563eb; }
-        .btn-edit:hover { background: #2563eb; color: white; }
-        .btn-ban { background: #fff7ed; color: #ea580c; }
-        .btn-ban:hover { background: #ea580c; color: white; }
-        .btn-delete { background: #fef2f2; color: #ef4444; }
-        .btn-delete:hover { background: #ef4444; color: white; }
-        
-        /* Buton Grubu */
-        .action-bar { margin-bottom: 20px; display: flex; justify-content: flex-end; gap: 15px; }
-        .btn-primary { background:#2563eb; color:white; text-decoration:none; padding:12px 20px; border-radius:10px; font-weight:700; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 10px rgba(37, 99, 235, 0.3); transition:0.2s; }
-        .btn-primary:hover { background: #1d4ed8; }
-        .btn-support { background:#4f46e5; color:white; text-decoration:none; padding:12px 20px; border-radius:10px; font-weight:700; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 10px rgba(79, 70, 229, 0.3); transition:0.2s; }
-        .btn-support:hover { background: #4338ca; }
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
+        .glass-header { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border-bottom: 1px solid #e2e8f0; }
     </style>
 </head>
-<body>
+<body class="text-slate-800">
 
-    <div class="topbar">
-        <a href="index.php" class="logo">MASTER PANEL</a>
-        <div style="display:flex; gap:20px; align-items:center;">
-            <a href="profile.php" style="color:white; text-decoration:none; font-size:14px;"><i class="ph-bold ph-user"></i> Profilim</a>
-            <a href="logout.php" class="logout">Çıkış</a>
+    <header class="glass-header fixed w-full top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                        <i class="ph-bold ph-crown text-2xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-xl text-slate-900 leading-none">Master Panel</h1>
+                        <p class="text-xs text-slate-500 font-medium mt-1">Yönetim Merkezi</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <a href="profile.php" class="hidden md:flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-indigo-600 transition">
+                        <i class="ph-bold ph-user-circle text-lg"></i> Profilim
+                    </a>
+                    <a href="logout.php" class="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-100 transition flex items-center gap-2">
+                        <i class="ph-bold ph-sign-out"></i> Çıkış
+                    </a>
+                </div>
+            </div>
         </div>
-    </div>
-<div class="card" style="background:white; padding:20px; border-radius:12px; border:1px solid #e2e8f0; margin-top:20px;">
-    <h3 style="margin-top:0;">🖥️ Sistem Sağlık Durumu</h3>
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-        <div style="background:#f8fafc; padding:10px; border-radius:8px;">
-            <span style="font-size:12px; color:#64748b;">PHP Sürümü</span>
-            <div style="font-weight:bold;"><?php echo phpversion(); ?></div>
-        </div>
-        <div style="background:#f8fafc; padding:10px; border-radius:8px;">
-            <span style="font-size:12px; color:#64748b;">Sunucu Yazılımı</span>
-            <div style="font-weight:bold;"><?php echo $_SERVER['SERVER_SOFTWARE']; ?></div>
-        </div>
-        <div style="background:#f8fafc; padding:10px; border-radius:8px;">
-            <span style="font-size:12px; color:#64748b;">Toplam Kullanıcı</span>
-            <div style="font-weight:bold; color:#2563eb;"><?php echo $pdo->query("SELECT COUNT(*) FROM users")->fetchColumn(); ?></div>
-        </div>
-        <div style="background:#f8fafc; padding:10px; border-radius:8px;">
-            <span style="font-size:12px; color:#64748b;">Disk Alanı (Tahmini)</span>
-            <div style="font-weight:bold;"><?php echo round(disk_free_space("/") / 1024 / 1024 / 1024, 2) . " GB Boş"; ?></div>
-        </div>
-    </div>
-</div>
-    <div class="container">
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-12">
         
-        <div class="stats">
-            <div class="card">
-                <div class="icon"><i class="ph-fill ph-storefront"></i></div>
-                <div><h3 class="num"><?php echo $total_users; ?></h3><p class="label">Toplam Restoran</p></div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between group hover:border-indigo-300 transition">
+                    <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 mb-4 group-hover:scale-110 transition-transform">
+                        <i class="ph-fill ph-storefront text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-3xl font-extrabold text-slate-900"><?php echo $total_users; ?></h3>
+                        <p class="text-sm font-medium text-slate-500">Toplam Restoran</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between group hover:border-green-300 transition">
+                    <div class="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center text-green-600 mb-4 group-hover:scale-110 transition-transform">
+                        <i class="ph-fill ph-check-circle text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-3xl font-extrabold text-slate-900"><?php echo $total_active; ?></h3>
+                        <p class="text-sm font-medium text-slate-500">Aktif Üyelik</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between group hover:border-yellow-300 transition relative overflow-hidden">
+                    <?php if($pending_tickets > 0): ?>
+                        <span class="absolute top-4 right-4 w-3 h-3 bg-red-500 rounded-full animate-ping"></span>
+                        <span class="absolute top-4 right-4 w-3 h-3 bg-red-500 rounded-full"></span>
+                    <?php endif; ?>
+                    <div class="w-12 h-12 bg-yellow-50 rounded-xl flex items-center justify-center text-yellow-600 mb-4 group-hover:scale-110 transition-transform">
+                        <i class="ph-fill ph-ticket text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-3xl font-extrabold text-slate-900"><?php echo $pending_tickets; ?></h3>
+                        <p class="text-sm font-medium text-slate-500">Bekleyen Destek</p>
+                    </div>
+                </div>
             </div>
-            <div class="card">
-                <div class="icon" style="background:#ecfdf5; color:#059669;"><i class="ph-fill ph-check-circle"></i></div>
-                <div><h3 class="num"><?php echo $total_active; ?></h3><p class="label">Aktif Üyelik</p></div>
-            </div>
-            <div class="card">
-                <div class="icon" style="background:#fefce8; color:#ca8a04;"><i class="ph-fill ph-chats-circle"></i></div>
-                <div><h3 class="num"><?php echo $pending_tickets; ?></h3><p class="label">Bekleyen Destek</p></div>
+
+            <div class="bg-slate-900 text-white p-6 rounded-2xl shadow-lg relative overflow-hidden flex flex-col justify-center">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-500 rounded-full blur-3xl opacity-20 -mr-10 -mt-10"></div>
+                <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i class="ph-bold ph-heartbeat"></i> Sistem Sağlığı</h3>
+                <div class="space-y-3 relative z-10">
+                    <div class="flex justify-between items-center text-sm border-b border-white/10 pb-2">
+                        <span class="text-slate-400">PHP Sürümü</span>
+                        <span class="font-mono font-bold text-indigo-300"><?php echo phpversion(); ?></span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm border-b border-white/10 pb-2">
+                        <span class="text-slate-400">Sunucu</span>
+                        <span class="font-mono font-bold text-green-400">Online</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-400">Disk Alanı</span>
+                        <span class="font-mono font-bold text-blue-300"><?php echo round(disk_free_space("/") / 1024 / 1024 / 1024, 2) . " GB"; ?></span>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="action-bar">
-              <a href="duyurular.php" class="btn-support" style="background:#f59e0b; box-shadow:0 4px 10px rgba(245, 158, 11, 0.3);">
-                <i class="ph-bold ph-megaphone"></i> Duyurular
-            </a>
-            <a href="destek.php" class="btn-support">
-                <i class="ph-bold ph-chats-circle"></i> Destek Merkezi
-                <?php if($pending_tickets > 0): ?>
-                    <span style="background:white; color:#4f46e5; font-size:11px; padding:2px 6px; border-radius:10px;"><?php echo $pending_tickets; ?></span>
-                <?php endif; ?>
-            </a>
-            
-            <a href="user_add.php" class="btn-primary">
-                <i class="ph-bold ph-plus"></i> Yeni Restoran Ekle
-            </a>
+
+        <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+            <div class="flex gap-3 w-full md:w-auto">
+                <a href="user_add.php" class="bg-indigo-600 text-white px-5 py-3 rounded-xl font-bold text-sm shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition flex items-center gap-2">
+                    <i class="ph-bold ph-plus"></i> Restoran Ekle
+                </a>
+                <a href="duyurular.php" class="bg-white text-slate-700 border border-slate-200 px-5 py-3 rounded-xl font-bold text-sm hover:border-indigo-300 hover:text-indigo-600 transition flex items-center gap-2">
+                    <i class="ph-bold ph-megaphone"></i> Duyurular
+                </a>
+                <a href="destek.php" class="bg-white text-slate-700 border border-slate-200 px-5 py-3 rounded-xl font-bold text-sm hover:border-indigo-300 hover:text-indigo-600 transition flex items-center gap-2 relative">
+                    <i class="ph-bold ph-chats-circle"></i> Destek
+                    <?php if($pending_tickets > 0): ?>
+                        <span class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center"><?php echo $pending_tickets; ?></span>
+                    <?php endif; ?>
+                </a>
+            </div>
+
+            <div class="relative w-full md:w-64">
+                <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Restoran ara..." class="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition">
+            </div>
         </div>
 
-        <div class="table-box">
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Restoran</th>
-                        <th>Kalan Süre</th> <th>Durum</th>
-                        <th style="text-align:right">Yönetim</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach($users as $u): ?>
-                        
-                    <?php
-                        $remaining_days = "Sınırsız";
-                        $days_color = "#6b7280";
-                        $is_expired = false;
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse" id="userTable">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500 font-bold tracking-wider">
+                            <th class="p-4 w-16 text-center">ID</th>
+                            <th class="p-4">İşletme Bilgisi</th>
+                            <th class="p-4">Kalan Süre</th>
+                            <th class="p-4 text-center">Durum</th>
+                            <th class="p-4 text-right">İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-sm">
+                        <?php foreach($users as $u): ?>
+                            <?php
+                                $remaining = "Sınırsız";
+                                $badgeClass = "bg-slate-100 text-slate-600";
+                                $is_expired = false;
 
-                        if (!empty($u['subscription_end'])) {
-                            $end_date = new DateTime($u['subscription_end']);
-                            $today = new DateTime();
-                            $today->setTime(0, 0, 0);
-                            $end_date->setTime(0, 0, 0);
+                                if (!empty($u['subscription_end'])) {
+                                    $end_date = new DateTime($u['subscription_end']);
+                                    $today = new DateTime();
+                                    $today->setTime(0, 0, 0); $end_date->setTime(0, 0, 0);
 
-                            if ($end_date < $today) {
-                                $remaining_days = "SÜRESİ BİTTİ";
-                                $days_color = "#ef4444";
-                                $is_expired = true;
-                            } else {
-                                $diff = $today->diff($end_date);
-                                $days = $diff->days;
-                                $remaining_days = $days . " Gün";
-                                if ($days < 7) $days_color = "#ea580c";
-                                else $days_color = "#16a34a";
-                            }
-                        }
-                    ?>
+                                    if ($end_date < $today) {
+                                        $remaining = "SÜRESİ DOLDU";
+                                        $badgeClass = "bg-red-100 text-red-700";
+                                        $is_expired = true;
+                                    } else {
+                                        $diff = $today->diff($end_date);
+                                        $days = $diff->days;
+                                        $remaining = $days . " Gün Kaldı";
+                                        if ($days < 7) $badgeClass = "bg-yellow-100 text-yellow-700";
+                                        else $badgeClass = "bg-green-100 text-green-700";
+                                    }
+                                }
+                                $rowClass = ($u['is_active'] == 0 || $is_expired) ? 'bg-red-50/50' : 'hover:bg-slate-50';
+                            ?>
+                            <tr class="transition <?php echo $rowClass; ?>">
+                                <td class="p-4 text-center font-mono text-slate-400">#<?php echo $u['id']; ?></td>
+                                <td class="p-4">
+                                    <div class="font-bold text-slate-900 text-base"><?php echo htmlspecialchars($u['restaurant_name']); ?></div>
+                                    <a href="../<?php echo $u['slug']; ?>" target="_blank" class="text-xs text-indigo-500 hover:underline flex items-center gap-1">
+                                        <i class="ph-bold ph-link"></i> menuly.net/<?php echo $u['slug']; ?>
+                                    </a>
+                                </td>
+                                <td class="p-4">
+                                    <span class="px-3 py-1 rounded-full text-xs font-bold <?php echo $badgeClass; ?>">
+                                        <?php echo $remaining; ?>
+                                    </span>
+                                </td>
+                                <td class="p-4 text-center">
+                                    <?php if($u['is_active'] == 1): ?>
+                                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-green-50 text-green-600 text-xs font-bold border border-green-200">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Aktif
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-red-50 text-red-600 text-xs font-bold border border-red-200">
+                                            <i class="ph-bold ph-lock-key"></i> Pasif
+                                        </span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="p-4">
+                                    <div class="flex justify-end items-center gap-2">
+                                        <a href="login_as.php?id=<?php echo $u['id']; ?>" target="_blank" class="group flex items-center gap-2 bg-indigo-600 text-white px-3 py-2 rounded-lg text-xs font-bold shadow hover:bg-indigo-700 transition" title="Restoran Paneline Gir">
+                                            <i class="ph-bold ph-sign-in"></i> <span class="hidden sm:inline">Yönet</span>
+                                        </a>
+                                        
+                                        <a href="user_edit.php?id=<?php echo $u['id']; ?>" class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-600 flex items-center justify-center transition" title="Düzenle">
+                                            <i class="ph-bold ph-pencil-simple"></i>
+                                        </a>
 
-                    <tr style="<?php echo ($u['is_active'] == 0 || $is_expired) ? 'background:#fef2f2;' : ''; ?>">
-                        <td>#<?php echo $u['id']; ?></td>
-                        <td>
-                            <div style="font-weight:700"><?php echo htmlspecialchars($u['restaurant_name']); ?></div>
-                            <div style="font-size:12px; color:#6b7280;">/<?php echo $u['slug']; ?></div>
-                        </td>
-                        
-                        <td>
-                            <span style="font-weight:700; color:<?php echo $days_color; ?>; background:white; padding:4px 8px; border:1px solid #eee; border-radius:6px;">
-                                <?php echo $remaining_days; ?>
-                            </span>
-                        </td>
+                                        <a href="index.php?toggle_status=<?php echo $u['id']; ?>" class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-600 hover:border-yellow-300 hover:text-yellow-600 flex items-center justify-center transition" title="Dondur/Aç">
+                                            <i class="ph-bold <?php echo $u['is_active'] == 1 ? 'ph-lock-open' : 'ph-lock-key'; ?>"></i>
+                                        </a>
 
-                        <td>
-                            <?php if($u['is_active'] == 1): ?>
-                                <span class="badge active">Aktif</span>
-                            <?php else: ?>
-                                <span class="badge passive">Donduruldu</span>
-                            <?php endif; ?>
-                        </td>
-                        <td style="text-align:right; display:flex; justify-content:flex-end; gap:8px;">
-                            <a href="login_as.php?id=<?php echo $u['id']; ?>" target="_blank" class="btn-action" title="Restoran Olarak Gir">
-    <i class="ph-bold ph-sign-in"></i> Yönet
-</a>
-                            <a href="../<?php echo $u['slug']; ?>" target="_blank" class="btn-icon btn-edit" title="Menüyü Gör"><i class="ph-bold ph-eye"></i></a>
-                            <a href="user_edit.php?id=<?php echo $u['id']; ?>" class="btn-icon btn-edit" title="Süre Uzat / Düzenle"><i class="ph-bold ph-pencil-simple"></i></a>
-                            <a href="index.php?toggle_status=<?php echo $u['id']; ?>" class="btn-icon btn-ban" title="Hesabı Dondur/Aç"><i class="ph-bold <?php echo $u['is_active'] == 1 ? 'ph-lock-key' : 'ph-lock-key-open'; ?>"></i></a>
-                            <a href="index.php?delete_user=<?php echo $u['id']; ?>" class="btn-icon btn-delete" onclick="return confirm('Silmek istediğine emin misin?')" title="Sil"><i class="ph-bold ph-trash"></i></a>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                                        <a href="index.php?delete_user=<?php echo $u['id']; ?>" onclick="return confirm('Bu restoranı ve tüm verilerini silmek istediğinize emin misiniz?')" class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-600 hover:border-red-300 hover:text-red-600 flex items-center justify-center transition" title="Sil">
+                                            <i class="ph-bold ph-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php if(count($users) == 0): ?>
+                <div class="p-8 text-center text-slate-500">
+                    <i class="ph-duotone ph-storefront text-4xl mb-2 opacity-50"></i>
+                    <p>Henüz hiç restoran eklenmemiş.</p>
+                </div>
+            <?php endif; ?>
         </div>
+
     </div>
+
+    <script>
+        // Basit JS Arama Fonksiyonu
+        function filterTable() {
+            var input, filter, table, tr, td, i, txtValue;
+            input = document.getElementById("searchInput");
+            filter = input.value.toUpperCase();
+            table = document.getElementById("userTable");
+            tr = table.getElementsByTagName("tr");
+
+            for (i = 0; i < tr.length; i++) {
+                // 1. Sütun (Restoran Adı) içinde arama yap
+                td = tr[i].getElementsByTagName("td")[1];
+                if (td) {
+                    txtValue = td.textContent || td.innerText;
+                    if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                        tr[i].style.display = "";
+                    } else {
+                        tr[i].style.display = "none";
+                    }
+                }
+            }
+        }
+    </script>
 </body>
 </html>

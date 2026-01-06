@@ -1,0 +1,30 @@
+RewriteEngine On
+RewriteBase /
+ErrorDocument 404 /404.html
+
+# 1. HTTPS ZORLAMASI
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# 2. SITEMAP XML (Ana dizinde sitemap.php varsa)
+RewriteRule ^sitemap\.xml$ sitemap.php [L]
+
+# 3. KARIŞILMAYACAK KLASÖRLER
+# Panel klasörüne girilirse buradaki kuralları durdur, oraya git.
+RewriteRule ^(panel|assets|robots\.txt) - [L]
+
+# 4. ANA SAYFA (Lansman)
+DirectoryIndex index.html
+
+# NOT: Buradaki eski slug yönlendirmesini sildik.
+# Artık menuly.net/asdoner yazınca burası tepki vermez (404 olur).
+
+# 1. .html uzantılı girilirse uzantısızı açmaya zorla (301 Yönlendirme)
+RewriteCond %{THE_REQUEST} /([^.]+)\.html [NC]
+RewriteRule ^ /%1 [NC,L,R=301]
+
+# 2. Uzantısız girilince arka planda .html dosyasını çalıştır
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.html -f
+RewriteRule ^([^/]+)/?$ $1.html [NC,L]

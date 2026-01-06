@@ -27,34 +27,27 @@ $restaurant = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$restaurant) header("Location: panel/404.php");
 
-// --- ZİYARETÇİ SAYACI (DÜZELTİLDİ: TEK VE MERKEZİ) ---
-// Artık sadece restoranın ID'sine göre işlem yapar, oturuma bakmaz.
+// --- ZİYARETÇİ SAYACI ---
 $today = date("Y-m-d");
 $res_id = $restaurant['id'];
 
-// 1. Günlük Log (Grafik için)
+// 1. Günlük Log
 $check = $pdo->prepare("SELECT id FROM visit_logs WHERE user_id = ? AND visit_date = ?");
 $check->execute([$res_id, $today]);
 
 if ($check->rowCount() > 0) {
-    // Bugün zaten girilmiş, sayıyı artır
-    $pdo->prepare("UPDATE visit_logs SET visit_count = visit_count + 1 WHERE user_id = ? AND visit_date = ?")
-        ->execute([$res_id, $today]);
+    $pdo->prepare("UPDATE visit_logs SET visit_count = visit_count + 1 WHERE user_id = ? AND visit_date = ?")->execute([$res_id, $today]);
 } else {
-    // Bugün ilk kez giriliyor, kayıt oluştur
-    $pdo->prepare("INSERT INTO visit_logs (user_id, visit_date, visit_count) VALUES (?, ?, 1)")
-        ->execute([$res_id, $today]);
+    $pdo->prepare("INSERT INTO visit_logs (user_id, visit_date, visit_count) VALUES (?, ?, 1)")->execute([$res_id, $today]);
 }
 
-// 2. Toplam Görüntülenme (Rozet için)
+// 2. Toplam Görüntülenme
 $view_upd = $pdo->prepare("UPDATE users SET views = views + 1 WHERE id = ?");
 $view_upd->execute([$res_id]);
-// -------------------------------------------------------
 
 // --- TEMA RENGİ VE RESİM AYARLARI ---
 $theme_color = !empty($restaurant['theme_color']) ? $restaurant['theme_color'] : '#1e3a8a';
 
-// Resim Yolu Düzeltici
 function fixPath($path) {
     if (empty($path)) return '';
     if (!file_exists($path) && file_exists('panel/' . $path)) {
@@ -80,17 +73,49 @@ if ($restaurant['is_active'] == 0) {
     die("<div style='display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:\"Segoe UI\",sans-serif;text-align:center;background:#f8fafc;color:#1e293b;padding:20px;'><div style='font-size:64px;margin-bottom:20px;'>⏳</div><h1 style='margin:0 0 10px 0;font-size:24px;font-weight:800;'>Hizmet Süresi Sona Erdi</h1><p style='color:#64748b;font-size:16px;line-height:1.5;margin:0;'>Bu işletmenin dijital menü hizmet süresi dolmuştur.<br>Hizmeti yenilemek için lütfen yönetici ile iletişime geçiniz.</p><div style='margin-top:30px;font-size:12px;color:#cbd5e1;font-weight:700;'>POWERED BY MENULY.</div></div>");
 }
 
-// ÜRÜNLERİ ÇEK
+// --- VERİLERİ ÇEKME ---
+
+// 1. Kategoriler
 $cat_stmt = $pdo->prepare("SELECT * FROM categories WHERE user_id = ? ORDER BY sort_order ASC, id DESC");
 $cat_stmt->execute([$restaurant['id']]);
 $categories = $cat_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$prod_stmt = $pdo->prepare("SELECT * FROM products WHERE user_id = ? AND is_active = 1 ORDER BY sort_order ASC, id DESC");$prod_stmt->execute([$restaurant['id']]);
-$all_products = $prod_stmt->fetchAll(PDO::FETCH_ASSOC);
+// 2. Ürünler ve Varyasyonları
+$prod_stmt = $pdo->prepare("
+    SELECT p.*, v.id as v_id, v.name as v_name, v.price as v_price 
+    FROM products p 
+    LEFT JOIN product_variations v ON p.id = v.product_id 
+    WHERE p.user_id = ? AND p.is_active = 1 
+    ORDER BY p.sort_order ASC, p.id DESC, v.sort_order ASC
+");
+$prod_stmt->execute([$restaurant['id']]);
+$raw_products = $prod_stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// 3. Veriyi Grupla
 $products_by_category = [];
-foreach ($all_products as $prod) {
-    $products_by_category[$prod['category_id']][] = $prod;
+foreach ($raw_products as $row) {
+    $pid = $row['id'];
+    $cid = $row['category_id'];
+    
+    if (!isset($products_by_category[$cid][$pid])) {
+        $products_by_category[$cid][$pid] = [
+            'id' => $row['id'],
+            'name' => $row['name'],
+            'description' => $row['description'],
+            'price' => $row['price'],
+            'image' => $row['image'],
+            'badges' => $row['badges'],
+            'category_id' => $row['category_id'],
+            'variations' => []
+        ];
+    }
+    
+    if (!empty($row['v_id'])) {
+        $products_by_category[$cid][$pid]['variations'][] = [
+            'name' => $row['v_name'],
+            'price' => $row['v_price']
+        ];
+    }
 }
 ?>
 
@@ -106,11 +131,8 @@ foreach ($all_products as $prod) {
     <link rel="stylesheet" href="assets/css/style.css">
     
     <style>
-        :root {
-            --primary-color: <?php echo $theme_color; ?>;
-        }
+        :root { --primary-color: <?php echo $theme_color; ?>; }
         
-        /* HEADER AYARI (Kapak Resmi veya Renk) */
         .restaurant-header {
             <?php if (!empty($cover_img)): ?>
                 background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('<?php echo $cover_img; ?>') no-repeat center center / cover !important;
@@ -119,32 +141,39 @@ foreach ($all_products as $prod) {
             <?php endif; ?>
         }
         
-        /* Kategori Butonları */
         .cat-link.active {
             background-color: var(--primary-color) !important;
             color: #ffffff !important;
             border-color: var(--primary-color) !important;
         }
         
-        /* Başlık Süslemeleri */
         .category-title::before { background-color: var(--primary-color) !important; }
         .category-title { color: var(--primary-color) !important; }
 
-        /* Modal Butonu */
         #modalPrice { color: var(--primary-color) !important; background: rgba(0,0,0,0.05) !important; }
         .modal-body button { background-color: var(--primary-color) !important; color: #ffffff !important; }
-
-        /* Linkler */
         .menuly-footer a { color: var(--primary-color) !important; }
         
-        /* Genel Stiller */
         .info-bar { display: flex; justify-content: center; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
         .info-badge { background: rgba(255,255,255,0.25); padding: 8px 14px; border-radius: 99px; font-size: 13px; color: white; display: flex; align-items: center; gap: 6px; text-decoration: none; backdrop-filter: blur(4px); font-weight: 600; border: 1px solid rgba(255,255,255,0.2); }
         .logo-img { width: 80px; height: 80px; object-fit: contain; background: white; border-radius: 50%; padding: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); margin-bottom: 10px; }
+
+        /* VARYASYONLAR */
+        .variations { margin-top: 10px; border-top: 1px dashed #e2e8f0; padding-top: 8px; width: 100%; }
+        .var-item { display: flex; justify-content: space-between; font-size: 12px; color: #475569; margin-bottom: 4px; padding: 2px 0; }
+        .var-name { font-weight: 600; }
+        .var-price { font-weight: 700; color: var(--primary-color); }
+
+        /* ROZET STİLLERİ */
+        .badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; margin-right: 3px; display: inline-block; }
+        .b-new { background: #dbeafe; color: #2563eb; }
+        .b-spicy { background: #fee2e2; color: #dc2626; }
+        .b-vegan { background: #dcfce7; color: #16a34a; }
+        .b-chef { background: #ffedd5; color: #ea580c; }
+        .b-gluten_free { background: #f3f4f6; color: #4b5563; }
     </style>
 </head>
 <body>
-
 
     <header class="restaurant-header">
         <div class="gtranslate_wrapper"></div>
@@ -167,30 +196,11 @@ foreach ($all_products as $prod) {
             </div>
         <?php endif; ?>
 
-            <?php if ($slug === 'demo'): ?>
-        <div onclick="window.open('https://menuly.net/panel/admin/demo_login.php', '_blank')" style="
-            position: absolute; 
-            top: 20px; 
-            left: 20px; 
-            z-index: 99999; 
-            background: rgba(0, 0, 0, 0.75); 
-            color: white; 
-            padding: 5px 18px; 
-            border-radius: 50px; 
-            font-size: 13px; 
-            font-weight: 700; 
-            backdrop-filter: blur(10px); 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3); 
-            display: flex; 
-            align-items: center; 
-            gap: 8px; 
-            border: 1px solid rgba(255,255,255,0.15);
-            transition: transform 0.2s;
-            cursor: pointer;
-        " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+        <?php if ($slug === 'demo'): ?>
+        <div onclick="window.open('https://menuly.net/panel/admin/demo_login.php', '_blank')" style="position: absolute; top: 20px; left: 20px; z-index: 99999; background: rgba(0, 0, 0, 0.75); color: white; padding: 5px 18px; border-radius: 50px; font-size: 13px; font-weight: 700; backdrop-filter: blur(10px); box-shadow: 0 10px 25px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,0.15); transition: transform 0.2s; cursor: pointer;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
             <i class="ph-bold ph-user-gear" style="font-size: 18px; color: #fbbf24;"></i> Admin Paneli <br> (Demo)
         </div>
-    <?php endif; ?>
+        <?php endif; ?>
 
         <h1 class="restaurant-name"><?php echo htmlspecialchars($restaurant['restaurant_name']); ?></h1>
         
@@ -249,17 +259,21 @@ foreach ($all_products as $prod) {
                             <?php foreach ($products_by_category[$cat['id']] as $prod): ?>
                                 <?php 
                                     $badge_config = [
-                                        'new' => ['class'=>'badge-new', 'text'=>'YENİ', 'icon'=>'🌟'],
-                                        'hot' => ['class'=>'badge-hot', 'text'=>'ACI', 'icon'=>'🌶️'],
-                                        'vegan' => ['class'=>'badge-vegan', 'text'=>'VEGAN', 'icon'=>'🌱'],
-                                        'chef' => ['class'=>'badge-chef', 'text'=>'ŞEFİN TAVSİYESİ', 'icon'=>'👨‍🍳']
+                                        'new' => ['class'=>'b-new', 'text'=>'YENİ', 'icon'=>'🌟'],
+                                        'spicy' => ['class'=>'b-spicy', 'text'=>'ACI', 'icon'=>'🌶️'],
+                                        'vegan' => ['class'=>'b-vegan', 'text'=>'VEGAN', 'icon'=>'🌱'],
+                                        'chef' => ['class'=>'b-chef', 'text'=>'ŞEFİN SEÇİMİ', 'icon'=>'👨‍🍳'],
+                                        'gluten_free' => ['class'=>'b-gluten_free', 'text'=>'GLUTENSİZ', 'icon'=>'🌾']
                                     ];
-                                    $b_code = isset($prod['badges']) ? $prod['badges'] : '';
                                     
-                                    // Ürün Resmi Yolu Düzeltme
+                                    $b_code = isset($prod['badges']) ? $prod['badges'] : '';
                                     $prod_img = fixPath($prod['image']);
+                                    
+                                    // JS için düzeltilmiş ürün objesi oluştur 
+                                    $js_prod = $prod;
+                                    $js_prod['image'] = $prod_img; // Sabitlenmiş yolu JS'e gönder //var-price kısmının sağına + eklenebilir
                                 ?>
-                                <div class="product-card" onclick='openProductModal(<?php echo json_encode($prod); ?>)'>
+                                <div class="product-card" onclick='openProductModal(<?php echo json_encode($js_prod); ?>)'>
                                     <?php if (!empty($prod_img)): ?>
                                         <img src="<?php echo htmlspecialchars($prod_img); ?>" class="product-img">
                                     <?php else: ?>
@@ -268,12 +282,31 @@ foreach ($all_products as $prod) {
                                     <div class="product-info">
                                         <div class="product-name">
                                             <?php echo htmlspecialchars($prod['name']); ?>
-                                            <?php if(!empty($b_code) && isset($badge_config[$b_code])): ?>
-                                                <span class="badge <?php echo $badge_config[$b_code]['class']; ?>"><?php echo $badge_config[$b_code]['icon']; ?> <?php echo $badge_config[$b_code]['text']; ?></span>
-                                            <?php endif; ?>
+                                            
+                                            <?php 
+                                                if(!empty($b_code)) {
+                                                    $badges = explode(',', $b_code);
+                                                    foreach($badges as $b) {
+                                                        if(isset($badge_config[$b])) {
+                                                            echo '<span class="badge '.$badge_config[$b]['class'].'">'.$badge_config[$b]['icon'].' '.$badge_config[$b]['text'].'</span> ';
+                                                        }
+                                                    }
+                                                }
+                                            ?>
                                         </div>
                                         <div class="product-desc"><?php echo htmlspecialchars($prod['description']); ?></div>
                                         <div class="product-price">₺<?php echo number_format($prod['price'], 2); ?></div>
+
+                                        <?php if(!empty($prod['variations'])): ?>
+                                            <div class="variations" onclick="event.stopPropagation();">
+                                                <?php foreach($prod['variations'] as $v): ?>
+                                                    <div class="var-item">
+                                                        <span class="var-name"><?php echo htmlspecialchars($v['name']); ?></span>
+                                                        <span class="var-price"><?php echo number_format($v['price'], 2); ?>₺</span>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             <?php endforeach; ?>
@@ -352,14 +385,13 @@ foreach ($all_products as $prod) {
             document.getElementById('modalPrice').innerText = '₺' + price;
             
             const imgEl = document.getElementById('modalImg');
+            
+            // Düzeltilmiş Yolu Kullan
             let imgPath = product.image;
-            if(imgPath && !imgPath.startsWith('panel/') && imgPath.startsWith('assets/')) {
-                // Yol düzeltmesi (gerekirse)
-            }
 
-            if (product.image && product.image !== "") { 
-                imgEl.src = product.image; 
-                imgEl.onerror = function() { this.src = 'panel/' + product.image; this.onerror = null; };
+            if (imgPath && imgPath !== "") { 
+                imgEl.src = imgPath; 
+                imgEl.onerror = function() { this.style.display = 'none'; };
                 imgEl.style.display = 'block'; 
             } else { 
                 imgEl.style.display = 'none'; 

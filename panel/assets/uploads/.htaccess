@@ -1,0 +1,6 @@
+# Bu klasörde PHP çalışmasını engelle
+<Files *.php>
+    deny from all
+</Files>
+# Sadece resimlere izin ver
+Options -Indexes
