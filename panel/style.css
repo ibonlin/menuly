@@ -1,0 +1,265 @@
+/* assets/css/style.css */
+
+:root {
+    --primary: #2563eb;       /* Menuly Mavisi */
+    --primary-dark: #1e3a8a;  /* Lacivert */
+    --bg: #f8fafc;            /* Arka Plan */
+    --text: #1e293b;          /* Koyu Yazı */
+    --text-light: #64748b;    /* Gri Yazı */
+    --card: #ffffff;          /* Kart Rengi */
+    --border: #e2e8f0;        /* Çizgi Rengi */
+    --radius: 16px;           /* Yuvarlaklık */
+    --shadow: 0 4px 20px -5px rgba(0,0,0,0.05);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    padding-bottom: 80px; /* Altta Menuly imzası için boşluk */
+}
+
+/* --- HEADER (RESTORAN KİMLİĞİ) --- */
+.restaurant-header {
+    background: var(--primary-dark);
+    color: white;
+    padding: 30px 20px 40px; /* Alt taraf uzun çünkü kategori barı gelecek */
+    text-align: center;
+    border-radius: 0 0 30px 30px;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(30, 58, 138, 0.3);
+}
+
+.restaurant-name {
+    font-size: 24px;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -0.5px;
+}
+
+.restaurant-desc {
+    font-size: 13px;
+    opacity: 0.8;
+    margin-top: 6px;
+}
+
+/* --- KATEGORİ NAVİGASYONU (YAPIŞKAN) --- */
+.category-nav-wrapper {
+    position: sticky;
+    top: 10px;
+    z-index: 100;
+    margin-top: -25px; /* Header'ın içine girsin */
+    padding: 0 16px;
+}
+
+.category-nav {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 6px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+    scrollbar-width: none; /* Scroll barı gizle */
+}
+.category-nav::-webkit-scrollbar { display: none; }
+
+.cat-link {
+    white-space: nowrap;
+    padding: 10px 18px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-light);
+    text-decoration: none;
+    background: #f1f5f9;
+    transition: all 0.2s;
+}
+
+.cat-link.active {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+}
+
+/* --- MENÜ LİSTESİ --- */
+.container {
+    max-width: 600px; /* Mobilde taşmasın, masaüstünde ince dursun */
+    margin: 0 auto;
+    padding: 20px 16px;
+}
+
+.category-section {
+    margin-bottom: 30px;
+    scroll-margin-top: 100px; /* Üstte yapışkan menü altında kalmasın */
+}
+
+.category-title {
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 16px;
+    color: var(--primary-dark);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.category-title::before {
+    content: '';
+    display: block;
+    width: 6px;
+    height: 24px;
+    background: var(--primary);
+    border-radius: 4px;
+}
+
+/* --- ÜRÜN KARTI (Güncellenmiş) --- */
+.product-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    /* İç boşluğu biraz artırdık (12px -> 16px) */
+    padding: 16px; 
+    display: flex;
+    /* Resim ile yazı arasındaki boşluğu artırdık (16px -> 20px) */
+    gap: 20px; 
+    margin-bottom: 16px; /* Kartlar arası boşluk (12px -> 16px) */
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    transition: transform 0.2s;
+}
+
+.product-card:active { transform: scale(0.98); }
+
+.product-img {
+    /* RESİM BOYUTUNU BÜYÜTTÜK (90px -> 110px) */
+    width: 110px;
+    height: 110px;
+    border-radius: 12px;
+    object-fit: cover;
+    background: #f1f5f9;
+    flex-shrink: 0;
+    /* Resimlere hafif bir gölge ekleyerek öne çıkaralım */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* Diğer kısımlar aynı kalabilir */
+.product-info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.product-name { font-weight: 700; font-size: 16px; margin-bottom: 4px; color: var(--text); }
+/* Açıklama satır sayısını 2'den 3'e çıkaralım, resim büyüyünce yer açıldı */
+.product-desc {
+    font-size: 12px;
+    color: var(--text-light);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 3; /* 2 yerine 3 satır göster */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+.product-price { font-weight: 800; color: var(--primary); font-size: 16px; margin-top: auto; }
+
+/* --- FOOTER (MENULY IMZASI) --- */
+.menuly-footer {
+    text-align: center;
+    padding: 30px;
+    color: var(--text-light);
+    font-size: 12px;
+    opacity: 0.7;
+}
+.menuly-footer span { font-weight: 700; color: var(--primary-dark); }
+/* --- WIFI MODAL STİLLERİ (Garanti Çalışması İçin Buraya Ekledik) --- */
+    .modal {
+        display: none; /* Varsayılan olarak gizli */
+        position: fixed; /* Ekrana sabitle */
+        z-index: 9999; /* En üstte dur */
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.5); /* Arka planı karart */
+        backdrop-filter: blur(5px); /* Arka planı bulanıklaştır (Modern dokunuş) */
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Javascript 'active' sınıfını ekleyince görünür yap ve ortala */
+    .modal.active {
+        display: flex; 
+    }
+
+    .modal-content {
+        background-color: #fff;
+        margin: auto;
+        padding: 0;
+        border: none;
+        width: 90%;
+        max-width: 380px; /* Çok geniş olmasın */
+        border-radius: 24px; /* Köşeleri yuvarlat */
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        position: relative;
+        text-align: center;
+        animation: modalPop 0.3s ease-out;
+    }
+
+    /* Açılış Animasyonu */
+    @keyframes modalPop {
+        from { transform: scale(0.9); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-close {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background: #f1f5f9;
+        color: #64748b;
+        border: none;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        font-size: 18px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+    .modal-close:hover { background: #e2e8f0; color: #ef4444; }
+
+    .modal-body { padding: 30px 24px; }
+
+    /* İçerik Düzeni */
+    .wifi-icon-box {
+        width: 70px;
+        height: 70px;
+        background: #eff6ff;
+        color: #2563eb;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        margin: 0 auto 16px;
+    }
+
+    .wifi-title { font-size: 20px; font-weight: 800; color: #1e293b; margin-bottom: 8px; }
+    .wifi-desc { color: #64748b; font-size: 14px; margin-bottom: 24px; }
+
+    .wifi-pass-box {
+        background: #f8fafc;
+        border: 2px dashed #cbd5e1;
+        padding: 16px;
+        border-radius: 16px;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+        overflow: hidden;
+    }
+    .wifi-pass-box:active { transform: scale(0.98); background: #f1f5f9; }
+
+    .wifi-pass-text { font-size: 24px; font-weight: 800; color: #1e293b; letter-spacing: 1px; }
+    .wifi-copy-hint { font-size: 12px; color: #2563eb; font-weight: 600; margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 4px; }

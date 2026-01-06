@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="tr" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kurumsal & Yasal Merkez - Menuly</title>
+    <meta name="description" content="Restoranınızı 15 dakikada dijitale taşıyın. Menuly QR Menü sistemi ile baskı maliyetine son verin, otomatik çeviri ve anlık fiyat güncelleme ile satışlarınızı artırın.">
+    <meta name="keywords" content="qr menü, dijital menü, restoran menü programı, karekod menü, temassız sipariş, online menü, kafe menü sistemi, ücretsiz qr menü">
+    <meta name="author" content="Adda Teknoloji">
+    <meta name="robots" content="index, follow"> 
+    <link rel="canonical" href="https://menuly.net"> 
+    <link rel="icon" type="image/png" href="panel/assets/favicon.png">
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://menuly.net/">
+    <meta property="og:title" content="Menuly - Restoranınızı Dijitale Taşıyın">
+    <meta property="og:description" content="Kağıt menülere veda edin. Uygulama indirmeden çalışan, çok dilli ve modern dijital menü sistemi.">
+    <meta property="og:image" content="https://menuly.net/assets/img/social-share-cover.jpg"> 
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta property="twitter:domain" content="menuly.net">
+    <meta property="twitter:url" content="https://menuly.net/">
+    <meta name="twitter:title" content="Menuly | Yeni Nesil QR Menü">
+    <meta name="twitter:description" content="Baskı maliyetlerine son verin. Saniyeler içinde güncellenebilen QR menü.">
+    <meta name="twitter:image" content="https://menuly.net/assets/img/social-share-cover.jpg">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 500: '#3b82f6', 600: '#2563eb', 900: '#1e3a8a' }
+                    },
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Özel Kaydırma Çubuğu */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Aktif Menü Efekti */
+        .nav-item.active { 
+            background-color: #eff6ff; 
+            color: #2563eb; 
+            border-right: 3px solid #2563eb;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-700 antialiased font-sans">
+
+    <header class="fixed top-0 w-full bg-white/90 backdrop-blur-md border-b border-slate-200 z-50 h-16 flex items-center">
+        <div class="max-w-7xl mx-auto px-4 w-full flex justify-between items-center">
+            <a href="https://menuly.net" class="flex items-center gap-2 group">
+                <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-brand-500/30 group-hover:scale-105 transition">
+                    <i class="ph-bold ph-qr-code text-xl"></i>
+                </div>
+                <span class="text-xl font-bold text-slate-900 tracking-tight">Menuly.</span>
+            </a>
+            <a href="https://menuly.net" class="text-sm font-bold text-slate-500 hover:text-brand-600 transition flex items-center gap-2">
+                <i class="ph-bold ph-arrow-left"></i> Ana Sayfa
+            </a>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 pt-24 pb-12 flex flex-col lg:flex-row gap-12">
+
+        <aside class="lg:w-64 flex-shrink-0 hidden lg:block">
+            <div class="sticky top-24 space-y-8">
+                <div>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-3">Kurumsal</h3>
+                    <nav class="space-y-1">
+                        <a href="#hakkimizda" class="nav-item block px-3 py-2 text-sm font-medium rounded-r-lg hover:bg-slate-100 transition text-slate-600">Hakkımızda</a>
+                        <a href="#ticari-bilgiler" class="nav-item block px-3 py-2 text-sm font-medium rounded-r-lg hover:bg-slate-100 transition text-slate-600">Ticari Bilgiler</a>
+                        <a href="#banka-hesaplari" class="nav-item block px-3 py-2 text-sm font-medium rounded-r-lg hover:bg-slate-100 transition text-slate-600">Banka Hesapları</a>
+                        <a href="#iletisim" class="nav-item block px-3 py-2 text-sm font-medium rounded-r-lg hover:bg-slate-100 transition text-slate-600">İletişim</a>
+                    </nav>
+                </div>
+                <div>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-3">Yasal Sözleşmeler</h3>
+                    <nav class="space-y-1">
+                        <a href="#kullanim-kosullari" class="nav-item block px-3 py-2 text-sm font-medium rounded-r-lg hover:bg-slate-100 transition text-slate-600">Kullanım Koşulları</a>
+                        <a href="#gizlilik" class="nav-item block px-3 py-2 text-sm font-medium rounded-r-lg hover:bg-slate-100 transition text-slate-600">Gizlilik Politikası</a>
+                        <a href="#iade" class="nav-item block px-3 py-2 text-sm font-medium rounded-r-lg hover:bg-slate-100 transition text-slate-600">İptal ve İade</a>
+                        <a href="#cerez" class="nav-item block px-3 py-2 text-sm font-medium rounded-r-lg hover:bg-slate-100 transition text-slate-600">Çerez Politikası</a>
+                    </nav>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 space-y-16">
+
+            <section id="hakkimizda" class="doc-section scroll-mt-28">
+                <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="w-12 h-12 bg-brand-50 rounded-xl flex items-center justify-center text-brand-600 text-2xl mb-6">
+                        <i class="ph-fill ph-buildings"></i>
+                    </div>
+                    <h1 class="text-3xl font-bold text-slate-900 mb-6">Hakkımızda</h1>
+                    <div class="prose prose-slate max-w-none text-slate-600 leading-relaxed">
+                        <p class="mb-4">
+                            Menuly, Adda Teknoloji ve Bilişim Hizmetleri tarafından 2025 yılında restoran ve kafe işletmelerinin dijital dönüşümüne öncülük etmek amacıyla kurulmuş yeni nesil bir teknoloji girişimidir.
+                            Pandemi sonrası değişen alışkanlıklarla birlikte, kağıt israfını önlemek, işletme maliyetlerini düşürmek ve müşterilere temassız, 
+                            hijyenik bir menü deneyimi sunmak ana hedefimizdir.
+                        </p>
+                        <p>
+                            Kullanıcı dostu arayüzümüz ve güçlü altyapımız ile işletmelerin menülerini dakikalar içinde dijitale taşımasına olanak sağlıyoruz.
+                            İstanbul merkezli ekibimizle, Türkiye'nin dört bir yanındaki restoranlara 7/24 kesintisiz hizmet vermekten gurur duyuyoruz.
+                        </p><br>
+                        <p>
+                        Adda Teknoloji ve Bilişim Hizmetleri 2018 yılında hosting ve yazılım sektörüne ilk adımını atmıştır. 
+                        Kuruluşundan bu yana Hosting ve Bilişim sektöründe hızlı ve istikrarlı büyüyen, yılların verdiği deneyim ve uzmanlığa dayanarak müşteri memnuniyetini ön planda tutan bir kurumdur.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="ticari-bilgiler" class="doc-section scroll-mt-28">
+                <h2 class="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
+                    <i class="ph-bold ph-identification-card text-brand-600"></i> Ticari Bilgiler
+                </h2>
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <table class="w-full text-left text-sm">
+                        <tbody class="divide-y divide-slate-100">
+                            <tr class="hover:bg-slate-50 transition">
+                                <th class="py-4 px-6 font-semibold text-slate-900 w-1/3">Ticari Unvan</th>
+                                <td class="py-4 px-6 text-slate-600">Adda Teknoloji ve Bilişim Hizmetleri</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition">
+                                <th class="py-4 px-6 font-semibold text-slate-900">Vergi Dairesi</th>
+                                <td class="py-4 px-6 text-slate-600">Halkalı Vergi Dairesi</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition">
+                                <th class="py-4 px-6 font-semibold text-slate-900">Vergi Numarası</th>
+                                <td class="py-4 px-6 text-slate-600 font-mono">884 084 8635</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition">
+                                <th class="py-4 px-6 font-semibold text-slate-900">Etbis Kayıt</th>
+                                <td class="py-4 px-6 text-slate-600 font-mono">Etbis'e kayıtlıdır.</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition">
+                                <th class="py-4 px-6 font-semibold text-slate-900">Kurumsal Mail Adresi</th>
+                                <td class="py-4 px-6 text-slate-600">info@menuly.net - info@adda.net.tr</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition">
+                                <th class="py-4 px-6 font-semibold text-slate-900">Merkez Adres</th>
+                                <td class="py-4 px-6 text-slate-600">Barbaros, Begonya Sk. No:3, Nidakule Ataşehir Kuzey - Ataşehir/İstanbul</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="banka-hesaplari" class="doc-section scroll-mt-28">
+                <h2 class="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
+                    <i class="ph-bold ph-bank text-brand-600"></i> Banka Hesapları
+                </h2>
+                <div class="grid md:grid-cols-2 gap-6">
+                    
+                    <div class="bg-white rounded-2xl border border-slate-200 p-6 relative group hover:border-purple-200 hover:shadow-lg transition-all duration-300">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-lg">QNB Finansbank / Enpara</span>
+                            <i class="ph-fill ph-credit-card text-2xl text-purple-200"></i>
+                        </div>
+                        <div class="space-y-1">
+                            <p class="text-xs text-slate-400 uppercase font-bold">ALICI ADI</p>
+                            <p class="font-semibold text-slate-800">Adda Teknoloji ve Bilişim Hizmetleri A.Ş.</p>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-slate-100">
+                            <p class="text-xs text-slate-400 uppercase font-bold mb-1">IBAN</p>
+                            <div class="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200 cursor-pointer hover:bg-purple-50 hover:border-purple-200 transition" onclick="copyToClipboard('TR25 0011 1000 0000 0117 3568 66', this)">
+                                <code class="font-mono text-slate-700 text-sm">TR25 0011 1000 0000 0117 3568 66</code>
+                                <span class="text-xs font-bold text-purple-600 copy-text"><i class="ph-bold ph-copy"></i> Kopyala</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200 p-6 relative group hover:border-blue-200 hover:shadow-lg transition-all duration-300">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded-lg">Yapı Kredi Bankası</span>
+                            <i class="ph-fill ph-credit-card text-2xl text-blue-200"></i>
+                        </div>
+                        <div class="space-y-1">
+                            <p class="text-xs text-slate-400 uppercase font-bold">ALICI ADI</p>
+                            <p class="font-semibold text-slate-800">Adda Teknoloji ve Bilişim Hizmetleri A.Ş.</p>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-slate-100">
+                            <p class="text-xs text-slate-400 uppercase font-bold mb-1">IBAN</p>
+                            <div class="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200 cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition" onclick="copyToClipboard('TR71 0006 7010 0000 0031 2596 89', this)">
+                                <code class="font-mono text-slate-700 text-sm">TR71 0006 7010 0000 0031 2596 89</code>
+                                <span class="text-xs font-bold text-blue-600 copy-text"><i class="ph-bold ph-copy"></i> Kopyala</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <p class="text-xs text-slate-400 mt-4 italic">* Ödeme yaparken açıklama kısmına sipariş numaranızı veya restoran adınızı yazmayı unutmayınız.</p>
+            </section>
+
+            <section id="iletisim" class="doc-section scroll-mt-28">
+                <div class="bg-slate-900 text-white p-8 rounded-2xl shadow-xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-64 h-64 bg-brand-600 rounded-full blur-3xl opacity-20 -mr-16 -mt-16"></div>
+                    
+                    <h2 class="text-2xl font-bold mb-6 relative z-10">Bize Ulaşın</h2>
+                    <div class="grid md:grid-cols-2 gap-8 relative z-10">
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                                <i class="ph-fill ph-envelope-simple text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-sm text-slate-300 uppercase tracking-wider mb-1">E-Posta</h4>
+                                <a href="mailto:info@menuly.net" class="text-lg font-semibold hover:text-brand-400 transition">info@menuly.net</a>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                                <i class="ph-fill ph-whatsapp-logo text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-sm text-slate-300 uppercase tracking-wider mb-1">WhatsApp / Telefon</h4>
+                                <a href="tel:+908503077973" class="text-lg font-semibold hover:text-brand-400 transition">+90 850 307 79 73</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="border-t border-slate-200 pt-12">
+                <h2 class="text-xl font-bold text-slate-900 mb-8">Yasal Sözleşmeler ve Politikalar</h2>
+
+                <section id="kullanim-kosullari" class="doc-section mb-12">
+                    <h3 class="text-lg font-bold text-slate-900 mb-4">Kullanım Koşulları</h3>
+                    <div class="prose prose-sm prose-slate max-w-none text-slate-600">
+                        <p class="font-bold">Son Güncelleme: 01.01.2026</p>
+                        <p>Lütfen Menuly.net web sitesini ve hizmetlerini kullanmadan önce bu Kullanım Koşulları'nı dikkatlice okuyunuz.</p>
+                        <h4>1. Hizmetin Tanımı</h4>
+                        <p>Menuly, restoranlar için QR kod tabanlı dijital menü oluşturma hizmeti sunar (SaaS). Kullanıcılar, panel üzerinden ürünlerini ekleyebilir ve QR kodlarını indirebilirler.</p>
+                        <h4>2. Üyelik ve Hesap Güvenliği</h4>
+                        <p>Üye olurken verdiğiniz bilgilerin doğruluğundan siz sorumlusunuz. Hesap şifrenizin güvenliğini sağlamak sizin sorumluluğunuzdadır.</p>
+                    </div>
+                </section>
+
+                <section id="gizlilik" class="doc-section mb-12">
+                    <h3 class="text-lg font-bold text-slate-900 mb-4">Gizlilik Politikası</h3>
+                    <div class="prose prose-sm prose-slate max-w-none text-slate-600">
+                        <p>Menuly olarak kişisel verilerinizin güvenliğine önem veriyoruz.</p>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><strong>Toplanan Veriler:</strong> Restoran Adı, İletişim Bilgileri, Menü içerikleri, IP adresleri.</li>
+                            <li><strong>Kullanım Amacı:</strong> Hizmetin sağlanması, faturalandırma ve güvenlik.</li>
+                            <li><strong>Paylaşım:</strong> Yasal zorunluluklar haricinde üçüncü şahıslarla paylaşılmaz.</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <section id="iade" class="doc-section mb-12">
+                    <h3 class="text-lg font-bold text-slate-900 mb-4">İptal ve İade Koşulları</h3>
+                    <div class="prose prose-sm prose-slate max-w-none text-slate-600">
+                        <p>Menuly, dijital bir hizmet (yazılım) sunduğu için, hizmet aktivasyonu gerçekleştikten sonra cayma hakkı kullanımı Mesafeli Sözleşmeler Yönetmeliği gereği kısıtlıdır.</p>
+                        <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg my-4">
+                            <strong>Memnuniyet Garantisi:</strong> Hizmeti satın aldığınız tarihten itibaren <strong>3 gün içinde</strong> memnun kalmazsanız, hiçbir gerekçe göstermeksizin %100 ücret iadesi talep edebilirsiniz.
+                        </div>
+                    </div>
+                </section>
+
+                <section id="cerez" class="doc-section">
+                    <h3 class="text-lg font-bold text-slate-900 mb-4">Çerez (Cookie) Politikası</h3>
+                    <div class="prose prose-sm prose-slate max-w-none text-slate-600">
+                        <p>Sitemizde kullanıcı deneyimini iyileştirmek, oturum güvenliğini sağlamak ve site trafiğini analiz etmek amacıyla çerezler kullanılmaktadır. Tarayıcı ayarlarınızdan çerezleri dilediğiniz zaman silebilirsiniz.</p>
+                    </div>
+                </section>
+            </div>
+
+        </main>
+    </div>
+
+    <footer class="border-t border-slate-200 bg-white py-8 mt-12">
+        <div class="max-w-7xl mx-auto px-4 text-center text-slate-500 text-sm">
+            &copy; 2025 Menuly Digital Systems. Tüm hakları saklıdır.
+        </div>
+    </footer>
+
+    <script>
+        // IBAN Kopyalama Fonksiyonu
+        function copyToClipboard(text, element) {
+            navigator.clipboard.writeText(text).then(() => {
+                const originalContent = element.innerHTML;
+                const copySpan = element.querySelector('.copy-text');
+                
+                // Görsel Geri Bildirim
+                copySpan.innerHTML = '<i class="ph-bold ph-check"></i> Kopyalandı!';
+                copySpan.classList.remove('text-blue-600', 'text-purple-600');
+                copySpan.classList.add('text-green-600');
+                
+                setTimeout(() => {
+                    element.innerHTML = originalContent; // Eski haline döndür
+                }, 2000);
+            });
+        }
+
+        // Scroll Spy (Menü Aktiflik Durumu)
+        const links = document.querySelectorAll('.nav-item');
+        const sections = document.querySelectorAll('.doc-section');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            const scrollY = window.scrollY + 150; // Offset
+
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (scrollY >= sectionTop) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            links.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>

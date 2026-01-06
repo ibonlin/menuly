@@ -1,0 +1,25 @@
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .logo-text {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 800;
+      font-size: 180px;
+      fill: #1e293b;
+    }
+    .icon-box {
+      fill: #2563eb;
+    }
+  </style>
+  <rect width="1920" height="1080" fill="white"/>
+  
+  <g transform="translate(500, 380)">
+    <rect x="0" y="0" width="320" height="320" rx="60" class="icon-box"/>
+    <path d="M65 65 H145 V145 H65 V65 Z" fill="white"/>
+    <path d="M175 65 H255 V145 H175 V65 Z" fill="white"/>
+    <path d="M65 175 H145 V255 H65 V175 Z" fill="white"/>
+    <path d="M175 175 H255 V215 H175 V175 Z" fill="white"/>
+    <path d="M175 215 H215 V255 H175 V215 Z" fill="white"/>
+    
+    <text x="400" y="230" class="logo-text">Menuly.</text>
+  </g>
+</svg>
