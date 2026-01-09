@@ -2,7 +2,40 @@
 session_start();
 require_once '../includes/db.php';
 
-// CSRF Token Oluştur (Oturum açılmamışsa bile form güvenliği için)
+// --- GÜVENLİK FONKSİYONLARI ---
+
+function get_client_ip() {
+    return $_SERVER['HTTP_CLIENT_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'];
+}
+
+function checkBruteForce($pdo, $ip) {
+    // Son 15 dakikada 5'ten fazla hata yapılmış mı?
+    $stmt = $pdo->prepare("SELECT * FROM login_attempts WHERE ip_address = ? AND last_attempt > (NOW() - INTERVAL 15 MINUTE)");
+    $stmt->execute([$ip]);
+    $attempt = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($attempt && $attempt['attempt_count'] >= 5) {
+        return true; // Engellendi
+    }
+    return false;
+}
+
+function logFailedLogin($pdo, $ip) {
+    // Kayıt var mı bak, varsa artır, yoksa oluştur
+    $stmt = $pdo->prepare("INSERT INTO login_attempts (ip_address, attempt_count, last_attempt) VALUES (?, 1, NOW()) 
+                           ON DUPLICATE KEY UPDATE attempt_count = attempt_count + 1, last_attempt = NOW()");
+    $stmt->execute([$ip]);
+}
+
+function clearLoginAttempts($pdo, $ip) {
+    // Başarılı girişte sayacı sıfırla
+    $stmt = $pdo->prepare("DELETE FROM login_attempts WHERE ip_address = ?");
+    $stmt->execute([$ip]);
+}
+
+// ------------------------------
+
+// CSRF Token Oluştur
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
@@ -13,8 +46,16 @@ if (isset($_SESSION['user_id'])) {
 }
 
 $error = '';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // 1. CSRF KONTROLÜ
+    $ip = get_client_ip();
+
+    // 1. BRUTE FORCE KONTROLÜ
+    if (checkBruteForce($pdo, $ip)) {
+        die("Çok fazla hatalı deneme yaptınız. Lütfen 15 dakika bekleyin.");
+    }
+
+    // 2. CSRF KONTROLÜ
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
         die("Güvenlik Hatası: Sayfa süresi dolmuş. Lütfen sayfayı yenileyip tekrar deneyin.");
     }
@@ -26,18 +67,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->execute([$username]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // 2. ŞİFRE KONTROLÜ (password_verify)
+    // 3. ŞİFRE KONTROLÜ
     if ($user && password_verify($password, $user['password'])) {
+        // --- SESSION FIXATION ÖNLEMİ (KRİTİK) ---
+        session_regenerate_id(true); 
+        // ----------------------------------------
+        
+        // --- BU SATIRI EKLE ---
+        logAdminAccess($pdo, $user['id']); 
+        // ----------------------
+
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['username'] = $user['username'];
         $_SESSION['restaurant_name'] = $user['restaurant_name'];
         
-        // Yeni token üret (Login sonrası güvenlik için)
+        // Başarılı girişte IP engelini kaldır
+        clearLoginAttempts($pdo, $ip);
+
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         
         header("Location: index.php");
         exit;
     } else {
+        // Hatalı girişi kaydet
+        logFailedLogin($pdo, $ip);
         $error = "Hatalı kullanıcı adı veya şifre.";
     }
 }

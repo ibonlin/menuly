@@ -256,6 +256,70 @@ for ($i = 6; $i >= 0; $i--) {
             <div class="chart-header"><h3>📈 Haftalık Analiz</h3><span class="chart-badge">Son 7 Gün</span></div>
             <div style="height: 300px;"><canvas id="viewsChart"></canvas></div>
         </div>
+        <?php
+// Güncellemeleri Çek
+$sys_updates = $pdo->query("SELECT * FROM system_updates ORDER BY created_at DESC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
+?>
+
+<?php if (count($sys_updates) > 0): ?>
+<div class="form-card" style="margin-top: 30px;">
+    <h3 style="display:flex; align-items:center; gap:10px; margin-bottom: 20px; font-size: 16px;">
+        <i class="ph-duotone ph-rocket-launch" style="color:var(--primary);"></i> Sistem Güncellemeleri & Yenilikler
+    </h3>
+    
+    <div class="updates-timeline">
+        <?php foreach ($sys_updates as $up): ?>
+            <?php 
+                // İkon ve Renk Seçimi
+                $icon = 'ph-star'; 
+                $color = '#2563eb'; 
+                $bg = '#eff6ff';
+                $label = 'YENİLİK';
+
+                if($up['type'] == 'fix') { 
+                    $icon = 'ph-wrench'; 
+                    $color = '#dc2626'; 
+                    $bg = '#fef2f2'; 
+                    $label = 'DÜZELTME';
+                } elseif($up['type'] == 'info') { 
+                    $icon = 'ph-megaphone'; 
+                    $color = '#475569'; 
+                    $bg = '#f8fafc'; 
+                    $label = 'DUYURU';
+                }
+            ?>
+            <div class="update-item" style="display: flex; gap: 15px; margin-bottom: 20px; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px;">
+                <div style="
+                    min-width: 40px; height: 40px; border-radius: 10px; 
+                    background: <?php echo $bg; ?>; color: <?php echo $color; ?>; 
+                    display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                    <i class="ph-bold <?php echo $icon; ?>"></i>
+                </div>
+                <div>
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                        <span style="font-size: 10px; font-weight: 700; background: <?php echo $bg; ?>; color: <?php echo $color; ?>; padding: 2px 6px; border-radius: 4px;">
+                            <?php echo $label; ?>
+                        </span>
+                        <span style="font-size: 12px; color: #94a3b8;">
+                            <?php echo date('d.m.Y', strtotime($up['created_at'])); ?>
+                        </span>
+                    </div>
+                    <h4 style="font-size: 14px; font-weight: 600; color: #1e293b; margin-bottom: 5px;">
+                        <?php echo htmlspecialchars($up['title']); ?>
+                    </h4>
+                    <p style="font-size: 13px; color: #64748b; line-height: 1.5;">
+                        <?php echo nl2br(htmlspecialchars($up['message'])); ?>
+                    </p>
+                </div>
+            </div>
+        <?php endforeach; ?>
+        
+        <style>
+            .update-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        </style>
+    </div>
+</div>
+<?php endif; ?>
     </main>
 
     <script>

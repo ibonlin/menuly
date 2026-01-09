@@ -156,11 +156,17 @@ $users = $pdo->query("SELECT * FROM users ORDER BY id DESC")->fetchAll(PDO::FETC
                 <a href="duyurular.php" class="bg-white text-slate-700 border border-slate-200 px-5 py-3 rounded-xl font-bold text-sm hover:border-indigo-300 hover:text-indigo-600 transition flex items-center gap-2">
                     <i class="ph-bold ph-megaphone"></i> Duyurular
                 </a>
+                                <a href="updates.php" class="bg-white text-slate-700 border border-slate-200 px-5 py-3 rounded-xl font-bold text-sm hover:border-indigo-300 hover:text-indigo-600 transition flex items-center gap-2">
+                    <i class="ph-bold ph-megaphone"></i> Güncellemeler
+                </a>
                 <a href="destek.php" class="bg-white text-slate-700 border border-slate-200 px-5 py-3 rounded-xl font-bold text-sm hover:border-indigo-300 hover:text-indigo-600 transition flex items-center gap-2 relative">
                     <i class="ph-bold ph-chats-circle"></i> Destek
                     <?php if($pending_tickets > 0): ?>
                         <span class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center"><?php echo $pending_tickets; ?></span>
                     <?php endif; ?>
+                </a>
+                                <a href="security_logs.php" class="bg-white text-slate-700 border border-slate-200 px-5 py-3 rounded-xl font-bold text-sm hover:border-indigo-300 hover:text-indigo-600 transition flex items-center gap-2">
+                    <i class="ph-bold ph-shield"></i> Security Logs
                 </a>
             </div>
 

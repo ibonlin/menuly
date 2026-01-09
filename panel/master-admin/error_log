@@ -1,0 +1,5 @@
+[07-Jan-2026 00:56:30 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xF0\x9F\x8E\x89 M...' for column `menuly_login`.`system_updates`.`title` at row 1 in /home/menuly/public_html/panel/master-admin/updates.php:21
+Stack trace:
+#0 /home/menuly/public_html/panel/master-admin/updates.php(21): PDOStatement->execute()
+#1 {main}
+  thrown in /home/menuly/public_html/panel/master-admin/updates.php on line 21

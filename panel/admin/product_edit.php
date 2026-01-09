@@ -25,75 +25,76 @@ $var_stmt = $pdo->prepare("SELECT * FROM product_variations WHERE product_id = ?
 $var_stmt->execute([$id]);
 $variations = $var_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// --- KAYDETME İŞLEMİ ---
+// --- KAYDETME İŞLEMİ (DEMO KORUMALI) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name = trim($_POST['name']);
-    $desc = trim($_POST['description']);
-    $price = trim($_POST['price']);
-    $cat_id = (int)$_POST['category_id'];
-    $sort = (int)$_POST['sort_order'];
-    $is_active = isset($_POST['is_active']) ? 1 : 0;
     
-    // Rozetler (Virgülle birleştirip kaydet)
-    $badges = isset($_POST['badges']) ? implode(',', $_POST['badges']) : '';
-
-    // Resim Yükleme
-    $image_path = $product['image'];
-    if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
-        $allowed = ['jpg', 'jpeg', 'png', 'webp'];
-        $ext = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
-        if (in_array($ext, $allowed)) {
-            if (!empty($product['image']) && file_exists('../' . $product['image'])) {
-                unlink('../' . $product['image']);
-            }
-            $new_name = 'prod_' . $user_id . '_' . uniqid() . '.' . $ext;
-            if (move_uploaded_file($_FILES['image']['tmp_name'], '../assets/uploads/' . $new_name)) {
-                $image_path = 'assets/uploads/' . $new_name;
-            }
-        }
-    }
-
-    // 1. ÜRÜNÜ GÜNCELLE
-    // Not: 'badges' sütununun veritabanında olduğundan emin ol (daha önce eklediysek)
-    // Eğer yoksa SQL hatası verir. Şimdilik badges'i sorguya ekliyorum.
-    $sql = "UPDATE products SET category_id=?, name=?, description=?, price=?, image=?, sort_order=?, is_active=?, badges=? WHERE id=? AND user_id=?";
-    $stmt = $pdo->prepare($sql);
-    
-    if ($stmt->execute([$cat_id, $name, $desc, $price, $image_path, $sort, $is_active, $badges, $id, $user_id])) {
+    // DEMO KONTROLÜ
+    if (isset($_SESSION['username']) && $_SESSION['username'] === 'demo') {
+        $message = '<div class="alert success">Demo Modu: Ürün ve varyasyonlar güncellendi! (Simülasyon)</div>';
+    } else {
+        // GERÇEK GÜNCELLEME İŞLEMİ
+        $name = trim($_POST['name']);
+        $desc = trim($_POST['description']);
+        $price = trim($_POST['price']);
+        $cat_id = (int)$_POST['category_id'];
+        $sort = (int)$_POST['sort_order'];
+        $is_active = isset($_POST['is_active']) ? 1 : 0;
         
-        // 2. VARYASYONLARI KAYDET
-        // Önce eskileri temizle (En temiz yöntem)
-        $pdo->prepare("DELETE FROM product_variations WHERE product_id = ?")->execute([$id]);
+        $badges = isset($_POST['badges']) ? implode(',', $_POST['badges']) : '';
 
-        if (isset($_POST['v_name']) && is_array($_POST['v_name'])) {
-            $v_sql = "INSERT INTO product_variations (product_id, name, price, sort_order) VALUES (?, ?, ?, ?)";
-            $v_stmt = $pdo->prepare($v_sql);
-            
-            for ($i = 0; $i < count($_POST['v_name']); $i++) {
-                $v_name = trim($_POST['v_name'][$i]);
-                $v_price = trim($_POST['v_price'][$i]);
-                if (!empty($v_name)) {
-                    $v_stmt->execute([$id, $v_name, $v_price, $i]);
+        // Resim Yükleme (Basitleştirilmiş)
+        $image_path = $product['image'];
+        if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
+            $allowed = ['jpg', 'jpeg', 'png', 'webp'];
+            $ext = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
+            if (in_array($ext, $allowed)) {
+                if (!empty($product['image']) && file_exists('../' . $product['image'])) {
+                    unlink('../' . $product['image']);
+                }
+                $new_name = 'prod_' . $user_id . '_' . uniqid() . '.' . $ext;
+                if (move_uploaded_file($_FILES['image']['tmp_name'], '../assets/uploads/' . $new_name)) {
+                    $image_path = 'assets/uploads/' . $new_name;
                 }
             }
         }
 
-        $message = '<div class="alert success">Ürün ve varyasyonlar güncellendi!</div>';
+        // 1. ÜRÜNÜ GÜNCELLE
+        $sql = "UPDATE products SET category_id=?, name=?, description=?, price=?, image=?, sort_order=?, is_active=?, badges=? WHERE id=? AND user_id=?";
+        $stmt = $pdo->prepare($sql);
         
-        // Güncel veriyi tekrar çek
-        $stmt = $pdo->prepare("SELECT * FROM products WHERE id = ?");
-        $stmt->execute([$id]);
-        $product = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        // Varyasyonları tekrar çek
-        $var_stmt->execute([$id]);
-        $variations = $var_stmt->fetchAll(PDO::FETCH_ASSOC);
-    } else {
-        $message = '<div class="alert error">Hata oluştu.</div>';
+        if ($stmt->execute([$cat_id, $name, $desc, $price, $image_path, $sort, $is_active, $badges, $id, $user_id])) {
+            
+            // 2. VARYASYONLARI KAYDET
+            $pdo->prepare("DELETE FROM product_variations WHERE product_id = ?")->execute([$id]);
+
+            if (isset($_POST['v_name']) && is_array($_POST['v_name'])) {
+                $v_sql = "INSERT INTO product_variations (product_id, name, price, sort_order) VALUES (?, ?, ?, ?)";
+                $v_stmt = $pdo->prepare($v_sql);
+                
+                for ($i = 0; $i < count($_POST['v_name']); $i++) {
+                    $v_name = trim($_POST['v_name'][$i]);
+                    $v_price = trim($_POST['v_price'][$i]);
+                    if (!empty($v_name)) {
+                        $v_stmt->execute([$id, $v_name, $v_price, $i]);
+                    }
+                }
+            }
+
+            $message = '<div class="alert success">Ürün ve varyasyonlar güncellendi!</div>';
+            
+            // Güncel veriyi tekrar çek
+            $stmt = $pdo->prepare("SELECT * FROM products WHERE id = ?");
+            $stmt->execute([$id]);
+            $product = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            $var_stmt->execute([$id]);
+            $variations = $var_stmt->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            $message = '<div class="alert error">Hata oluştu.</div>';
+        }
     }
 }
 
-// Mevcut rozetleri diziye çevir
 $current_badges = !empty($product['badges']) ? explode(',', $product['badges']) : [];
 ?>
 
@@ -110,7 +111,6 @@ $current_badges = !empty($product['badges']) ? explode(',', $product['badges']) 
         .edit-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
         .img-preview { width: 100%; height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 15px; border: 1px solid #eee; }
         
-        /* Varyasyon Stilleri */
         .variation-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; }
         .variation-row input { margin: 0 !important; }
         .btn-remove-var { background: #fee2e2; color: #ef4444; border: none; width: 36px; height: 36px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
@@ -118,7 +118,6 @@ $current_badges = !empty($product['badges']) ? explode(',', $product['badges']) 
         .btn-add-var { background: #eff6ff; color: #2563eb; border: 1px dashed #2563eb; width: 100%; padding: 10px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top: 10px; }
         .btn-add-var:hover { background: #2563eb; color: white; border-style: solid; }
 
-        /* Rozet Checkbox */
         .badge-options { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 5px; }
         .badge-check { display: none; }
         .badge-label { 
