@@ -2,21 +2,14 @@
 session_start();
 require_once '../includes/db.php';
 
-// --- TELEGRAM AYARLARI ---
+// ... (TELEGRAM AYARLARI AYNI KALSIN) ...
 define('TG_BOT_TOKEN', '8589740930:AAELRmRrRIqal63joAnmHWdTIblI_oDyMc8');
 define('TG_CHAT_ID', '758649120');
 
-// Telegram Gönderme Fonksiyonu
 function sendTelegram($message) {
     if (empty(TG_BOT_TOKEN) || empty(TG_CHAT_ID)) return;
-    
     $url = "https://api.telegram.org/bot" . TG_BOT_TOKEN . "/sendMessage";
-    $data = [
-        'chat_id' => TG_CHAT_ID,
-        'text' => $message,
-        'parse_mode' => 'HTML'
-    ];
-    
+    $data = ['chat_id' => TG_CHAT_ID, 'text' => $message, 'parse_mode' => 'HTML'];
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_POST, true);
@@ -38,12 +31,53 @@ $user_id = $_SESSION['user_id'];
 $restaurant_name = isset($_SESSION['restaurant_name']) ? $_SESSION['restaurant_name'] : 'Restoran #' . $user_id;
 $view_ticket_id = isset($_GET['view']) ? (int)$_GET['view'] : 0;
 
-// --- DEMO KORUMASI ---
+// --- CSRF KORUMASI ---
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+// --- GÜVENLİ DOSYA YÜKLEME FONKSİYONU (GÜNCELLENDİ) ---
+function uploadFile($file) {
+    $maxSize = 5 * 1024 * 1024; // 5MB
+    $uploadDir = '../assets/uploads/';
+
+    if ($file['size'] > $maxSize) return ['error' => 'Dosya boyutu 5MB\'ı geçemez!'];
+    
+    // 1. Uzantı Kontrolü
+    $allowed_ext = ['jpg', 'jpeg', 'png', 'pdf'];
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    if (!in_array($ext, $allowed_ext)) return ['error' => 'Sadece JPG, PNG ve PDF yüklenebilir!'];
+
+    // 2. MIME Type Kontrolü (Gerçek dosya türü)
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime = finfo_file($finfo, $file['tmp_name']);
+    finfo_close($finfo);
+
+    $allowed_mime = [
+        'image/jpeg', 'image/png', 'application/pdf'
+    ];
+
+    if (!in_array($mime, $allowed_mime)) {
+        return ['error' => 'Geçersiz dosya içeriği!'];
+    }
+
+    $newName = uniqid('support_') . '.' . $ext;
+    if (move_uploaded_file($file['tmp_name'], $uploadDir . $newName)) {
+        return ['path' => 'assets/uploads/' . $newName];
+    }
+    return ['error' => 'Dosya yüklenirken sunucu hatası oluştu.'];
+}
+
 $is_demo = (isset($_SESSION['username']) && $_SESSION['username'] === 'demo');
 
 // --- İŞLEM 1: YENİ TALEP OLUŞTURMA ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_ticket'])) {
     
+    // CSRF Check
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        die("Güvenlik Hatası: Token geçersiz.");
+    }
+
     if ($is_demo) { header("Location: destek.php?error=demo"); exit; }
 
     $subject = htmlspecialchars(trim($_POST['subject']));
@@ -64,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_ticket'])) {
         $stmt = $pdo->prepare("INSERT INTO ticket_replies (ticket_id, user_id, message, attachment) VALUES (?, ?, ?, ?)");
         $stmt->execute([$ticket_id, $user_id, $message, $attachmentPath]);
 
-        // TELEGRAM BİLDİRİMİ
+        // Telegram
         $tg_msg = "🚨 <b>YENİ DESTEK TALEBİ!</b>\n\n";
         $tg_msg .= "🏪 <b>Restoran:</b> $restaurant_name\n";
         $tg_msg .= "📌 <b>Konu:</b> $subject\n";
@@ -78,6 +112,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_ticket'])) {
 
 // --- İŞLEM 2: CEVAP YAZMA ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_ticket'])) {
+    
+    // CSRF Check
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        die("Güvenlik Hatası: Token geçersiz.");
+    }
+
     $t_id = (int)$_POST['ticket_id'];
     
     if ($is_demo) { header("Location: destek.php?view=$t_id&error=demo"); exit; }
@@ -101,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_ticket'])) {
 
         $pdo->prepare("UPDATE support_tickets SET status = 'customer_reply', updated_at = NOW() WHERE id = ?")->execute([$t_id]);
         
-        // TELEGRAM BİLDİRİMİ
+        // Telegram
         $tg_msg = "💬 <b>MÜŞTERİ YANITLADI!</b>\n\n";
         $tg_msg .= "🏪 <b>Restoran:</b> $restaurant_name\n";
         $tg_msg .= "📌 <b>Konu:</b> " . htmlspecialchars($ticket_info['subject']) . "\n";
@@ -113,25 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_ticket'])) {
     }
 }
 
-// --- DOSYA YÜKLEME FONKSİYONU ---
-function uploadFile($file) {
-    $allowed = ['jpg', 'jpeg', 'png', 'pdf'];
-    $maxSize = 5 * 1024 * 1024; 
-    $uploadDir = '../assets/uploads/';
-
-    if ($file['size'] > $maxSize) return ['error' => 'Dosya boyutu 5MB\'ı geçemez!'];
-    
-    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    if (!in_array($ext, $allowed)) return ['error' => 'Sadece JPG, PNG ve PDF yüklenebilir!'];
-
-    $newName = uniqid('support_') . '.' . $ext;
-    if (move_uploaded_file($file['tmp_name'], $uploadDir . $newName)) {
-        return ['path' => 'assets/uploads/' . $newName];
-    }
-    return ['error' => 'Dosya yüklenirken sunucu hatası oluştu.'];
-}
-
-// --- VERİ ÇEKME ---
+// ... (VERİ ÇEKME KISIMLARI AYNI KALSIN) ...
 if ($view_ticket_id > 0) {
     $stmt = $pdo->prepare("SELECT * FROM support_tickets WHERE id = ? AND user_id = ?");
     $stmt->execute([$view_ticket_id, $user_id]);
@@ -155,41 +177,28 @@ if ($view_ticket_id > 0) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Destek Merkezi - Menuly</title>
-    
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    
     <link rel="stylesheet" href="../assets/css/admin.css">
-
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = { corePlugins: { preflight: false } }
-    </script>
-
+    <script>tailwind.config = { corePlugins: { preflight: false } }</script>
     <style>
-        /* Tailwind Reset - Sidebar'ı bozmadan içerik ayarları */
         .tw-reset *, .tw-reset ::before, .tw-reset ::after { box-sizing: border-box; border-width: 0; border-style: solid; border-color: #e5e7eb; }
         .tw-reset { font-family: 'Plus Jakarta Sans', sans-serif; color: #1f2937; line-height: 1.5; }
-        
         .chat-bubble { position: relative; max-width: 90%; padding: 16px; border-radius: 16px; font-size: 14px; line-height: 1.6; word-wrap: break-word; }
         @media (min-width: 768px) { .chat-bubble { max-width: 80%; } }
-        
         .chat-me { background: #2563eb; color: white; margin-left: auto; border-top-right-radius: 4px; }
         .chat-support { background: #ffffff; border: 1px solid #e5e7eb; color: #374151; margin-right: auto; border-top-left-radius: 4px; }
         .chat-time { font-size: 11px; margin-top: 4px; opacity: 0.7; font-weight: 600; display: block; text-align: right; }
-        
         .file-attachment { display:flex; align-items:center; gap:8px; margin-top:8px; background:rgba(255,255,255,0.2); padding:8px; border-radius:8px; text-decoration:none; color:inherit; font-weight:600; transition:0.2s; word-break: break-all; }
         .file-attachment:hover { background:rgba(255,255,255,0.3); }
         .chat-support .file-attachment { background:#f3f4f6; color:#2563eb; }
         .chat-support .file-attachment:hover { background:#e5e7eb; }
-        
-        /* Modal Animasyon */
         @keyframes fadeIn { from { opacity:0; transform: scale(0.95); } to { opacity:1; transform: scale(1); } }
         .animate-bounce-in { animation: fadeIn 0.2s ease-out forwards; }
     </style>
 </head>
 <body>
-
     <aside class="sidebar">
         <a href="index.php" class="logo"><span><i class="ph-bold ph-qr-code"></i></span> Menuly.</a>
         <ul class="nav-links">
@@ -207,19 +216,16 @@ if ($view_ticket_id > 0) {
         <div class="overlay" onclick="toggleSidebar()"></div>
 
         <div class="tw-reset">
-            
             <?php if(isset($_GET['error']) && $_GET['error'] == 'demo'): ?>
                 <div class="bg-orange-100 text-orange-800 p-4 rounded-xl mb-6 border border-orange-200 font-bold text-sm flex items-center gap-2 animate-pulse">
                     <i class="ph-fill ph-warning-circle text-lg"></i> Demo modunda destek talebi oluşturamaz veya yanıtlayamazsınız.
                 </div>
             <?php endif; ?>
-
             <?php if(isset($_GET['success'])): ?>
                 <div class="bg-green-100 text-green-700 p-4 rounded-xl mb-6 border border-green-200 font-bold text-sm flex items-center gap-2">
                     <i class="ph-fill ph-check-circle text-lg"></i> Talebiniz başarıyla oluşturuldu.
                 </div>
             <?php endif; ?>
-
             <?php if($view_ticket_id > 0): ?>
                 <div class="flex items-center justify-between mb-6">
                     <div class="flex items-center gap-4">
@@ -260,6 +266,7 @@ if ($view_ticket_id > 0) {
                 <?php if($ticket_detail['status'] !== 'closed'): ?>
                     <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-lg sticky bottom-6">
                         <form method="POST" enctype="multipart/form-data" class="flex flex-col gap-3">
+                            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                             <input type="hidden" name="reply_ticket" value="1">
                             <input type="hidden" name="ticket_id" value="<?php echo $view_ticket_id; ?>">
                             
@@ -317,22 +324,13 @@ if ($view_ticket_id > 0) {
                         </a>
                     <?php endforeach; ?>
                 </div>
-
-                <?php if(count($tickets) == 0): ?>
-                    <div class="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-300">
-                        <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400 text-3xl">
-                            <i class="ph-duotone ph-life-buoy"></i>
-                        </div>
-                        <h3 class="text-gray-900 font-bold text-lg">Henüz talep yok</h3>
-                        <p class="text-gray-500 text-sm mt-1">Bir sorun yaşarsanız buradan bize yazabilirsiniz.</p>
-                    </div>
-                <?php endif; ?>
-
+                
                 <div id="newTicketModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div class="bg-white w-[95%] max-w-lg rounded-2xl shadow-2xl p-6 relative animate-bounce-in">
                         <button onclick="document.getElementById('newTicketModal').classList.add('hidden')" class="absolute top-4 right-4 text-gray-400 hover:text-red-500"><i class="ph-bold ph-x text-xl"></i></button>
                         <h2 class="text-lg font-bold text-gray-900 mb-4">Yeni Destek Talebi</h2>
                         <form method="POST" enctype="multipart/form-data">
+                            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                             <input type="hidden" name="create_ticket" value="1">
                             <div class="mb-4">
                                 <label class="block text-sm font-bold text-gray-700 mb-1">Konu</label>
@@ -356,11 +354,6 @@ if ($view_ticket_id > 0) {
             <?php endif; ?>
         </div>
     </main>
-    <script>
-        function toggleSidebar() {
-            document.querySelector('.sidebar').classList.toggle('active');
-            document.querySelector('.overlay').classList.toggle('active');
-        }
-    </script>
+    <script>function toggleSidebar(){document.querySelector('.sidebar').classList.toggle('active');document.querySelector('.overlay').classList.toggle('active');}</script>
 </body>
 </html>

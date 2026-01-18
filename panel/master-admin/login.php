@@ -1,5 +1,7 @@
 <?php
-// Dosya yoluna dikkat (bir üst klasörde)
+// panel/master-admin/login.php
+
+// Veritabanı bağlantısı
 require_once '../includes/db.php';
 
 // Session güvenliği
@@ -7,6 +9,45 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// --- GÜVENLİK FONKSİYONLARI (Admin panelinden uyarlandı) ---
+
+function get_client_ip() {
+    return $_SERVER['HTTP_CLIENT_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'];
+}
+
+function checkBruteForce($pdo, $ip) {
+    // Son 15 dakikada 5'ten fazla hata yapılmış mı?
+    $stmt = $pdo->prepare("SELECT * FROM login_attempts WHERE ip_address = ? AND last_attempt > (NOW() - INTERVAL 15 MINUTE)");
+    $stmt->execute([$ip]);
+    $attempt = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($attempt && $attempt['attempt_count'] >= 5) {
+        return true; // Engellendi
+    }
+    return false;
+}
+
+function logFailedLogin($pdo, $ip) {
+    // Kayıt var mı bak, varsa artır, yoksa oluştur
+    $stmt = $pdo->prepare("INSERT INTO login_attempts (ip_address, attempt_count, last_attempt) VALUES (?, 1, NOW()) 
+                           ON DUPLICATE KEY UPDATE attempt_count = attempt_count + 1, last_attempt = NOW()");
+    $stmt->execute([$ip]);
+}
+
+function clearLoginAttempts($pdo, $ip) {
+    // Başarılı girişte sayacı sıfırla
+    $stmt = $pdo->prepare("DELETE FROM login_attempts WHERE ip_address = ?");
+    $stmt->execute([$ip]);
+}
+
+// -----------------------------------------------------------
+
+// CSRF Token Oluştur (Yoksa)
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+// Zaten giriş yapmışsa yönlendir
 if (isset($_SESSION['master_id'])) {
     header("Location: index.php");
     exit;
@@ -15,6 +56,20 @@ if (isset($_SESSION['master_id'])) {
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $ip = get_client_ip();
+
+    // 1. BRUTE FORCE KONTROLÜ
+    if (checkBruteForce($pdo, $ip)) {
+        // Güvenlik: Hata mesajında süreyi belirtmek kullanıcı dostudur ancak saldırgana bilgi verir.
+        // Standart bir mesaj verip işlemi durduruyoruz.
+        die("Güvenlik Uyarısı: Çok fazla başarısız giriş denemesi. Lütfen 15 dakika bekleyiniz.");
+    }
+
+    // 2. CSRF KONTROLÜ
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        die("Güvenlik Hatası: Oturum süreniz dolmuş veya geçersiz istek. Lütfen sayfayı yenileyip tekrar deneyin.");
+    }
+
     $username = trim($_POST['username']);
     $password = trim($_POST['password']);
 
@@ -23,19 +78,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->execute([$username]);
     $admin = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // GÜVENLİ GİRİŞ (Hashlenmiş şifre kontrolü)
-    // Eğer şifreni henüz hashlemediysen burası hata verebilir.
-    // Düz metin kullanıyorsan geçici olarak: ($admin['password'] === $password) yapabilirsin.
+    // 3. ŞİFRE KONTROLÜ
     if ($admin && password_verify($password, $admin['password'])) {
+        // Başarılı girişte IP engelini kaldır
+        clearLoginAttempts($pdo, $ip);
+
+        // Session güvenliği
+        session_regenerate_id(true);
+
         $_SESSION['master_id'] = $admin['id'];
         $_SESSION['master_user'] = $admin['username'];
         
-        // Session güvenliği
-        session_regenerate_id(true);
+        // Yeni CSRF token oluştur (Session Fixation önlemi)
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         
         header("Location: index.php");
         exit;
     } else {
+        // Hatalı girişi kaydet
+        logFailedLogin($pdo, $ip);
         $error = "Hatalı patron bilgisi veya şifre.";
     }
 }
@@ -93,6 +154,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
 
             <form method="POST" class="space-y-5">
+                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+
                 <div class="space-y-1.5">
                     <label class="text-[11px] font-bold text-slate-400 uppercase ml-1 tracking-wider">Kullanıcı Adı</label>
                     <div class="relative group">
